@@ -198,7 +198,7 @@ export function LdcView() {
           ) : null}
           {combo || demo.studentCard?.kind === "twin" ? (
             <div className="mt-2 rounded-xl bg-black/25 p-2 text-[11px] leading-5 text-[#b6f3d2]">
-              <p>{isEbookPoint(examPoint.code) ? "🧬 長題目防棄考雙階段：明晚 20:00 只補菱形 Step 6 的 1M（90 秒）。+7 日才交 JM29.2 完整 3 分手寫 LQ，目標 2M + 1A。" : `🧬 長題目防棄考雙階段：明晚 20:00 只補 Step 2 的 1M（90 秒）。+7 日才交 ${examPoint.code} 完整 3 分手寫 LQ，目標 2M + 1A。`}</p>
+              <p>{isEbookPoint(examPoint.code) ? "🧬 長題目防棄考雙階段：明晚 20:00 只補菱形 Step 8 的 1M（90 秒）。+7 日才交 JM29.2 完整 3 分手寫 LQ，目標 2M + 1A。" : `🧬 長題目防棄考雙階段：明晚 20:00 只補 Step 2 的 1M（90 秒）。+7 日才交 ${examPoint.code} 完整 3 分手寫 LQ，目標 2M + 1A。`}</p>
             </div>
           ) : null}
         </Card>
@@ -282,7 +282,7 @@ function bands(mode: "large" | "small", seats: typeof SEATS, hero: number, wrong
         color: "#ffb4ac",
         rows: rows.filter((row) => row.mastery < 50),
         action: ebook
-          ? { kind: "steps" as const, title: "🔴 強制推送 e-Book「▸ 0/9 逐行提示器」+「✍️ Replay Ink 筆跡回放卡」", body: "逐行揭曉，不一次顯示 9 步。" }
+          ? { kind: "steps" as const, title: "🔴 強制推送 e-Book「▸ 0/12 逐行提示器」+「✍️ Replay Ink 筆跡回放卡」", body: "逐行揭曉，不一次顯示 12 步。" }
           : { kind: "steps" as const, title: "🔴 強制推送 15s 雙軌分步卡 + Fast Notes", body: "先看 15 秒分步，再看 Fast Notes。做完才回到班上的主線題。" },
       },
     ];

@@ -9,7 +9,7 @@ import {
   useReducer,
   type ReactNode,
 } from "react";
-import { activeTopics, isEbookPoint, lqTwinCard, packOf, teleScript, weakestExam, type EbookTab, type SubjectKey } from "./curriculum";
+import { activeTopics, isEbookPoint, JM29_LINES, lqTwinCard, packOf, teleScript, weakestExam, type EbookTab, type SubjectKey } from "./curriculum";
 import { HERO, PAYOUT_OK, SEATS, TOPICS } from "./mock-data";
 import { lightOf, type HintLevel, type Light } from "./mastery";
 
@@ -558,7 +558,7 @@ function reducer(state: State, action: Action): State {
       const maths = state.subject === "Maths";
       const ebook = isEbookPoint(state.examCode);
       const scheduled = hasR && hasE;
-      const jump = action.key === "1" ? 6 : action.key === "2" ? 3 : 8;
+      const jump = action.key === "1" ? 8 : action.key === "2" ? 5 : 12;
       return {
         ...state,
         hotkeys,
@@ -580,16 +580,16 @@ function reducer(state: State, action: Action): State {
           : {}),
         toast: scheduled
           ? ebook
-            ? "2+3 已排程：明晚 90 秒只補菱形 Step 6 的 1M，下週才交完整手寫 LQ。輔助標示 MA3 / MA2。"
+            ? "2+3 已排程：明晚 90 秒只補菱形 Step 8 的 1M，下週才交完整手寫 LQ。輔助標示 MA3 / MA2。"
             : maths
               ? "2+3 已排程：明晚 90 秒只補 Step 2 的 1M，下週才交完整手寫 LQ。數學科附 MA3 / MA2。"
               : "2+3 已排程：明晚 90 秒只補斷點 1M，下週才交完整手寫 LQ。物理科只顯示 C / R / E。"
           : ebook
             ? action.key === "1"
-              ? "C 概念：定位 Step 2 與 Step 6，[property of rhombus] 未寫。輔助：MA1 概念理解 / MA5 幾何處理。"
+              ? "C 概念：定位 Step 8，∠DFC = ∠DFE，[property of rhombus] 未寫。輔助：MA1 概念理解 / MA5 幾何處理。"
               : action.key === "2"
-                ? "R 審題：AC = 30 cm 未除以 2。輔助：MA3 圖文轉化。"
-                : "E 執行：8 cm 有答案，但漏寫定理理由或單位 cm。輔助：MA2 代數運算。"
+                ? "R 審題：∠BAC = 42° 未代入 2∠ACB。輔助：MA3 圖文轉化。"
+                : "E 執行：34.5° 有答案，但漏寫 [property of rhombus] 或角度單位。輔助：MA2 代數運算。"
             : `已記錄熱鍵 ${action.key}。`,
       };
     }
@@ -803,7 +803,7 @@ function reducer(state: State, action: Action): State {
       };
     }
     case "ebook-nav": {
-      const max = 9;
+      const max = JM29_LINES.length;
       const shown =
         action.dir === "next" ? Math.min(max, state.ebookShown + 1)
         : action.dir === "prev" ? Math.max(0, state.ebookShown - 1)
@@ -831,7 +831,7 @@ function reducer(state: State, action: Action): State {
         kocEbook: true,
         split: true,
         highlight: "mask",
-        toast: "KOC 助教 iPad 已載入 JM29c Page 1 Q4 (0/9 步 + 定理理由標籤)。",
+        toast: "KOC 助教 iPad 已載入 JM29c Q5 (0/12 步 + 定理理由標籤)。",
       };
     case "dispatch-card":
       return {
@@ -864,7 +864,7 @@ function reducer(state: State, action: Action): State {
         parentBrief: ebook
           ? {
               title: "四邊形 · LQ 步驟得分率",
-              body: `${name}今週喺【四邊形】長題目透過課堂互動 e-Book 練成「先標對角線垂直 90° 搶 1M 步驟分」，並補齊定理理由 [prop. of rhombus]，下次校內 UT 幾何長題目預計可穩袋滿分！`,
+              body: `${name}今週喺【四邊形】長題目透過課堂互動 e-Book 練成「先標菱形對角線平分 ∠DFE 搶 1M 步驟分」，並補齊定理理由 [prop. of rhombus]，由 42° 計到 34.5°，下次校內 UT 幾何長題目預計可穩袋滿分！`,
               ink: true,
             }
           : {

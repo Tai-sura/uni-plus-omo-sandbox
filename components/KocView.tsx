@@ -80,10 +80,10 @@ export function KocView() {
               {demo.subject === "Maths" && (demo.kocEbook || demo.ebookOpen || isEbookPoint(demo.examCode)) ? (
                 <>
                   <EbookLink />
-                  <p className="mt-2 font-bold">JM29c · Page 1 · Q4 Rhombus · 學生手機 {demo.ebookShown}/9 步</p>
-                  <p>核對點：1M 平分 · 1M ∠AOB = 90° · 1A BO = 8 cm</p>
+                  <p className="mt-2 font-bold">JM29c · Q5 Rhombus · 學生手機 {demo.ebookShown}/{JM29_LINES.length} 步</p>
+                  <p>核對點：1M ∠ACB = 69° · 1M ∠DFC = ∠DFE · 1A ∠DFE = 34.5°</p>
                   <div className="mt-1 space-y-0.5">
-                    {JM29_LINES.slice(0, Math.max(demo.ebookShown, demo.kocEbook ? 9 : 0)).map((line, index) => {
+                    {JM29_LINES.slice(0, Math.max(demo.ebookShown, demo.kocEbook ? JM29_LINES.length : 0)).map((line, index) => {
                       const lineNo = index + 1;
                       const marked = demo.ebookBreak === lineNo || ebookHits(demo.hotkeys).includes(lineNo);
                       return (
@@ -296,7 +296,7 @@ function StudentPageOnDesk({ seatName }: { seatName: string }) {
     <div id="koc-student-page" className="mt-2 rounded-lg border border-[#e4c07a]/50 bg-[#1a1408] p-2">
       <p className="text-[10px] font-bold text-[#e4c07a]">學生顯示頁 · {seatName}的手機會同時看到</p>
       {ebookLive ? (
-        <p className="mt-1 text-[12px] leading-5">JM29c · Page 1 · Q4 Rhombus · 已揭 {demo.ebookShown}/9 步</p>
+        <p className="mt-1 text-[12px] leading-5">JM29c · Q5 Rhombus · 已揭 {demo.ebookShown}/{JM29_LINES.length} 步</p>
       ) : (
         <>
           <p className="mt-1 text-[12px] font-bold">{point.code} {point.name} · {point.score}%</p>

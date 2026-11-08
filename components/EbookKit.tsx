@@ -28,7 +28,7 @@ export function EbookConsole() {
             })
           }
         >
-          📖 展開課堂 e-Book 互動鏡像 (JM29c · Page 1 · Q4 Rhombus)
+          📖 展開課堂 e-Book 互動鏡像 (JM29c · Page 2 · Q5 Rhombus)
         </button>
         <a
           className="rounded-lg bg-white/10 px-2 py-1.5 text-[11px] font-bold"
@@ -39,7 +39,7 @@ export function EbookConsole() {
           🔗 新分頁開啟真實 JM29c e-Book
         </a>
         <button className="rounded-lg bg-[#143524] px-2 py-1.5 text-[11px]" onClick={() => demo.dispatch({ type: "ebook-sync" })}>
-          📲 同步本頁 (JM29c P.1) 9 步解答至 KOC 助教遮罩
+          📲 同步本頁 (JM29c Q5) 12 步解答至 KOC 助教遮罩
         </button>
       </div>
       <div className="mt-2 flex flex-wrap gap-1">
@@ -69,7 +69,7 @@ export function EbookConsole() {
           📥 Export PDF with ink
         </button>
       </div>
-      {demo.kocEbook ? <p className="mt-1 text-[11px] text-[#b6f3d2]">KOC 助教 iPad 已載入 JM29c Page 1 Q4 (0/9 步 + 定理理由標籤)</p> : null}
+      {demo.kocEbook ? <p className="mt-1 text-[11px] text-[#b6f3d2]">KOC 助教 iPad 已載入 JM29c Q5 (0/12 步 + 定理理由標籤)</p> : null}
       {demo.ebookOpen ? <EbookStage audience="ldc" /> : null}
     </div>
   );
@@ -87,12 +87,12 @@ export function EbookStage({ audience }: { audience: "ldc" | "student" }) {
   return (
     <div id={audience === "student" ? "student-ebook" : undefined} className="rounded-xl bg-[#f4efe4] p-2 text-[#21180f]">
       <p className="text-[11px] font-bold">
-        {audience === "student" ? "跟住右屏 · " : ""}JM29c · Page 1 · Q4 Rhombus · 3 分 LQ
+        {audience === "student" ? "跟住右屏 · " : ""}JM29c · Q5 Rhombus · 3 分 LQ
       </p>
       {audience === "student" ? <p className="text-[10px] text-[#8a5a12]">右屏揭到第幾步、畫到哪一筆，這部手機會同時顯示。</p> : null}
-      <p className="mt-1 text-[12px] leading-5">在菱形 ABCD 中，對角線相交於 O。已知 AB = 17 cm 及 AC = 30 cm，求 BO 的長度。</p>
+      <p className="mt-1 text-[12px] leading-5">In the figure, CDEF is a rhombus. AFC and BCD are straight lines. If AB = AC and ∠BAC = 42°, find ∠DFE.</p>
       {demo.ebookTab !== "rhombus" ? (
-        <p className="mt-1 text-[11px] text-[#8a5a12]">這個分頁是 e-Book 難度層。逐行揭曉仍鎖定 Rhombus Q4，方便對照 Basic / Standard / Level 2。</p>
+        <p className="mt-1 text-[11px] text-[#8a5a12]">這個分頁是 e-Book 難度層。逐行揭曉仍鎖定 Rhombus Q5，方便對照 Basic / Standard / Level 2。</p>
       ) : null}
       <EbookRevealer
         shown={demo.ebookShown}
@@ -108,7 +108,7 @@ export function EbookStage({ audience }: { audience: "ldc" | "student" }) {
       <RhombusInk runId={demo.ebookRun} pen={demo.ebookPen} />
       {audience === "ldc" ? (
         <p className="mt-1 rounded-lg bg-[#fff6d8] px-2 py-1 text-[10px] leading-4 text-[#5c4310]">
-          💡 零額外拍片成本：LDC 上堂在 e-Book 畫的筆跡 (Save Ink JSON) + 逐行步驟 (0/9)，下課自動打包成 &lt;50% 學生的 15s 筆跡回放急救卡！
+          💡 零額外拍片成本：LDC 上堂在 e-Book 畫的筆跡 (Save Ink JSON) + 逐行步驟 (0/12)，下課自動打包成 &lt;50% 學生的 15s 筆跡回放急救卡！
         </p>
       ) : null}
     </div>
@@ -141,14 +141,14 @@ export function EbookRevealer({
     <div className="mt-2">
       <div className="flex flex-wrap gap-1">
         <button className="rounded-lg bg-[#21180f] px-2 py-1 text-[11px] font-bold text-white" onClick={() => onNav("next")}>
-          {student ? `▸ 揭曉下一步提示 (目前 ${shown}/9)` : "▸ 下一步"}
+          {student ? `▸ 揭曉下一步提示 (目前 ${shown}/${JM29_LINES.length})` : "▸ 下一步"}
         </button>
         {student ? null : (
           <button className="rounded-lg bg-[#21180f] px-2 py-1 text-[11px] font-bold text-white" onClick={() => onNav("all")}>» 全部顯示</button>
         )}
         <button className="rounded-lg bg-[#21180f] px-2 py-1 text-[11px] font-bold text-white" onClick={() => onNav("prev")}>◂ 上一步</button>
         <button className="rounded-lg bg-[#21180f] px-2 py-1 text-[11px] font-bold text-white" onClick={() => onNav("reset")}>↺ 重置</button>
-        <span className="rounded-lg bg-white/70 px-2 py-1 text-[11px]">當前顯示：{shown} / 9 步</span>
+        <span className="rounded-lg bg-white/70 px-2 py-1 text-[11px]">當前顯示：{shown} / {JM29_LINES.length} 步</span>
       </div>
       <div className="mt-2 space-y-1">
         {JM29_LINES.slice(0, shown).map((line, index) => {
@@ -180,11 +180,11 @@ export function StudentEbookCard() {
   const [shown, setShown] = useState(0);
   const [reward, setReward] = useState(false);
   const [runId, setRunId] = useState(0);
-  const next = () => setShown((value) => Math.min(9, value + 1));
+  const next = () => setShown((value) => Math.min(JM29_LINES.length, value + 1));
   return (
     <div>
-      <p className="text-[11px] text-[#e4c07a]">📝 LQ 長題目步驟拆解 (1M/1A) · JM29c Page 1 Q4</p>
-      <p className="mt-1 text-[12px] leading-5">在菱形 ABCD 中，AB = 17 cm，AC = 30 cm，求 BO。自己揭提示，唔好一次睇晒答案。</p>
+      <p className="text-[11px] text-[#e4c07a]">📝 LQ 長題目步驟拆解 (1M/1A) · JM29c Q5</p>
+      <p className="mt-1 text-[12px] leading-5">CDEF 是菱形，AB = AC，∠BAC = 42°，求 ∠DFE。自己揭提示，唔好一次睇晒答案。</p>
       <EbookRevealer
         shown={shown}
         breakLine={null}
@@ -199,18 +199,18 @@ export function StudentEbookCard() {
           }
         }}
       />
-      {shown >= 2 && shown < 9 ? (
+      {shown >= 8 && shown < JM29_LINES.length ? (
         <button
           className="mt-2 w-full rounded-xl bg-[#e4c07a] px-2 py-2 text-[12px] font-bold text-[#1b1406]"
           onClick={() => {
             setReward(true);
-            demo.dispatch({ type: "toast", text: "自主搶回 1M + 1A。呢度見到 AO = ½ AC 之後，自己計埋 BO。" });
+            demo.dispatch({ type: "toast", text: "自主搶回 1A。見到 ∠DFC = ∠DFE 之後，自己計埋 34.5°。" });
           }}
         >
-          我識計落去，搶回 1M + 1A
+          我識計落去，搶回 1A
         </button>
       ) : null}
-      {reward ? <p className="mt-1 text-[12px] font-bold text-[#b6f3d2]">已獎勵：自主搶回 1M + 1A。你喺 {shown}/9 就停低自己計。</p> : null}
+      {reward ? <p className="mt-1 text-[12px] font-bold text-[#b6f3d2]">已獎勵：自主搶回 1A。你喺 {shown}/{JM29_LINES.length} 就停低自己計。</p> : null}
       <button className="mt-2 rounded-lg bg-white/10 px-2 py-1.5 text-[11px]" onClick={() => setRunId((value) => value + 1)}>
         ✍️ 重播老師 e-Book 手寫拆題筆跡 (Replay Ink · 15s)
       </button>
@@ -232,7 +232,7 @@ export function RhombusInk({ runId, pen, frame }: { runId: number; pen: "P" | "H
     const timer = window.setInterval(() => {
       step += 1;
       setTick(step);
-      if (step >= 9) window.clearInterval(timer);
+      if (step >= JM29_LINES.length) window.clearInterval(timer);
     }, 900);
     return () => window.clearInterval(timer);
   }, [runId, frame]);
@@ -241,24 +241,45 @@ export function RhombusInk({ runId, pen, frame }: { runId: number; pen: "P" | "H
   const showHigh = pen !== "P";
   return (
     <div className="mt-2 rounded-xl bg-white p-2 text-[#21180f]">
-      <svg viewBox="0 0 220 250" className="mx-auto h-44 w-full max-w-[240px]">
-        {showHigh && tick >= 5 ? <polygon points="110,28 186,122 110,122" fill="#ffe14a" opacity="0.7" /> : null}
-        <polygon points="110,28 186,122 110,216 34,122" fill="none" stroke="#243044" strokeWidth="2" />
-        {tick >= 2 ? <line x1="110" y1="28" x2="110" y2="216" stroke="#243044" strokeWidth="1.4" /> : null}
-        {tick >= 2 ? <line x1="34" y1="122" x2="186" y2="122" stroke="#243044" strokeWidth="1.4" /> : null}
-        {showRed && tick >= 6 ? <path d="M110,108 H122 V122" fill="none" stroke="#d10f0f" strokeWidth="2" /> : null}
-        <text x="104" y="22" fontSize="11" fill="#243044">A</text>
-        <text x="190" y="126" fontSize="11" fill="#243044">B</text>
-        <text x="104" y="232" fontSize="11" fill="#243044">C</text>
-        <text x="18" y="126" fontSize="11" fill="#243044">D</text>
-        <text x="114" y="118" fontSize="11" fill="#243044">O</text>
-        {tick >= 1 ? <text x="132" y="78" fontSize="11" fill={showRed ? "#d10f0f" : "#243044"}>17 cm</text> : null}
-        {tick >= 4 ? <text x="72" y="84" fontSize="11" fill={showRed ? "#d10f0f" : "#243044"}>15 cm</text> : null}
-        {tick >= 9 ? <text x="128" y="146" fontSize="11" fill={showRed ? "#d10f0f" : "#243044"}>8 cm</text> : null}
+      <svg viewBox="0 0 250 190" className="mx-auto h-48 w-full max-w-[280px]">
+        {showHigh && tick >= 8 ? <polygon points="132,158 210,158 194,92 116,92" fill="#ffe14a" opacity="0.75" /> : null}
+        {showHigh && tick >= 3 && tick < 8 ? <polygon points="100,16 24,158 132,158" fill="#c9e4ff" opacity="0.55" /> : null}
+        <polygon points="100,16 24,158 132,158" fill="none" stroke="#243044" strokeWidth="1.8" />
+        <line x1="132" y1="158" x2="210" y2="158" stroke="#243044" strokeWidth="1.8" />
+        <polyline points="132,158 116,92 194,92 210,158" fill="none" stroke="#243044" strokeWidth="1.8" />
+        <line x1="116" y1="92" x2="210" y2="158" stroke="#243044" strokeWidth="1.4" />
+        <path d="M100,34 L92,30 L96,40" fill="none" stroke="#243044" strokeWidth="1.2" />
+        {showRed && tick >= 2 ? <g stroke="#d10f0f" strokeWidth="1.6">
+          <line x1="62" y1="78" x2="70" y2="86" />
+          <line x1="66" y1="74" x2="74" y2="82" />
+          <line x1="112" y1="78" x2="120" y2="70" />
+          <line x1="116" y1="82" x2="124" y2="74" />
+        </g> : null}
+        {showRed && tick >= 7 ? <text x="136" y="150" fontSize="11" fill="#d10f0f">69°</text> : null}
+        {showRed && tick >= 8 ? <path d="M124,104 L132,108 L128,116" fill="none" stroke="#d10f0f" strokeWidth="1.5" /> : null}
+        {showRed && tick >= 9 ? <g stroke="#d10f0f" strokeWidth="1.4">
+          <line x1="150" y1="88" x2="162" y2="88" />
+          <line x1="70" y1="154" x2="82" y2="154" />
+        </g> : null}
+        {showRed && tick >= 12 ? <text x="128" y="84" fontSize="11" fill="#d10f0f">34.5°</text> : null}
+        <text x="94" y="12" fontSize="11" fill="#243044">A</text>
+        <text x="10" y="168" fontSize="11" fill="#243044">B</text>
+        <text x="124" y="176" fontSize="11" fill="#243044">C</text>
+        <text x="206" y="176" fontSize="11" fill="#243044">D</text>
+        <text x="104" y="88" fontSize="11" fill="#243044">F</text>
+        <text x="196" y="88" fontSize="11" fill="#243044">E</text>
+        <text x="78" y="36" fontSize="11" fill={showRed && tick >= 5 ? "#d10f0f" : "#243044"}>42°</text>
       </svg>
       <p className="text-center text-[10px] leading-4">
-        {tick >= 6 ? "∠AOB = 90°  [property of rhombus]" : tick >= 2 ? "AO = ½ AC  [property of rhombus]" : "菱形 ABCD · 筆跡回放"}
-        {tick >= 7 ? " · [Pyth. theorem]" : ""}
+        {tick >= 12
+          ? "∠DFE = 34.5°"
+          : tick >= 8
+            ? "∠DFC = ∠DFE  [property of rhombus]"
+            : tick >= 7
+              ? "∠ACB = 69°  [∠ sum of △]"
+              : tick >= 3
+                ? "∠ABC = ∠ACB  [base ∠s, isos. △]"
+                : "Q5 · CDEF rhombus · 筆跡回放"}
       </p>
     </div>
   );

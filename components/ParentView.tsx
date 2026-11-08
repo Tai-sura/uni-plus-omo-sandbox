@@ -100,8 +100,8 @@ export function ParentView() {
           {demo.parentBrief.ink ? (
             <div className="mt-2 rounded-xl bg-[#f4efe4] p-2 text-[#21180f]">
               <p className="text-[12px] font-bold">📄 已附上課堂 e-Book 老師親筆批註快照 · Export PDF with ink</p>
-              <RhombusInk runId={0} pen="both" frame={9} />
-              <p className="text-center text-[11px]">∠AOB = 90° [property of rhombus]</p>
+              <RhombusInk runId={0} pen="both" frame={12} />
+              <p className="text-center text-[11px]">∠DFE = 34.5° [property of rhombus]</p>
             </div>
           ) : null}
         </Card>

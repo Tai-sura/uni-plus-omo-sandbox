@@ -159,7 +159,7 @@ export const PACKS: Record<SubjectKey, SubjectPack> = {
         hot: true,
         subtopics: [
           { code: "JM29.1", name: "梯形 Trapezium", score: 78, cre: "[C 概念] 只有一對平行邊" },
-          { code: "JM29.2", name: "菱形 Rhombus", score: 44, cre: "[C 概念] 忘記菱形對角線互相垂直 ∠AOB = 90° + [E 執行] 漏寫定理理由 prop. of rhombus", ma: "MA5 幾何處理" },
+          { code: "JM29.2", name: "菱形 Rhombus", score: 44, cre: "[C 概念] 忘記菱形對角線平分內角 ∠DFC = ∠DFE + [E 執行] 漏寫 property of rhombus，34.5° 仍失分", ma: "MA5 幾何處理" },
           { code: "JM29.3", name: "長方形 Rectangle", score: 82, cre: "[C 概念] 四個角都是直角" },
           { code: "JM29.4", name: "正方形與進階證明 Square & Level 2", score: 60, cre: "[R 審題] 要同時用到菱形與長方形性質", ma: "MA4 邏輯推理" },
         ],
@@ -246,18 +246,18 @@ export function creFromHotkeys(keys: string[], subject: SubjectKey) {
 export function teleScript(subject: SubjectKey, keys: string[], student = "鄭*博", examCode?: string | null) {
   if (examCode?.startsWith("JM29")) {
     if (keys.includes("1") && !keys.includes("2") && !keys.includes("3")) {
-      return `今日課題：四邊形（JM29c 菱形長題目）。${student}斷在第 2 步同第 6 步，未寫 [property of rhombus]，屬 C 概念（輔助標示：MA1 概念理解 / MA5 幾何處理）。對角線互相平分，而且 ∠AOB = 90°。`;
+      return `今日課題：四邊形（JM29c Q5 菱形）。${student}斷在第 8 步，未寫對角線平分內角 [property of rhombus]，屬 C 概念（輔助標示：MA1 概念理解 / MA5 幾何處理）。∠DFC = ∠DFE。`;
     }
     if (keys.includes("2") && keys.includes("3")) {
-      return `今日課題：四邊形（JM29c 菱形長題目）。${student}下一刀要同時補 R 審題（AC = 30 cm 是全條對角線，要先除以 2；輔助標示：MA3 圖文轉化）同 E 執行（8 cm 仍要寫 [Pyth. theorem] 同單位 cm；輔助標示：MA2 代數運算）。`;
+      return `今日課題：四邊形（JM29c Q5 菱形）。${student}下一刀要同時補 R 審題（∠BAC = 42° 要代入 2∠ACB + 42°；輔助標示：MA3 圖文轉化）同 E 執行（34.5° 仍要寫 [property of rhombus]；輔助標示：MA2 代數運算）。`;
     }
     if (keys.includes("2")) {
-      return `今日課題：四邊形（JM29c 菱形長題目）。${student}漏看 AC = 30 cm 是全條對角線，未除以 2 就代入畢氏定理，屬 R 審題（輔助標示：MA3 圖文轉化）。`;
+      return `今日課題：四邊形（JM29c Q5 菱形）。${student}漏看 AB = AC 同 ∠BAC = 42°，第 5 步未把 42° 代入，屬 R 審題（輔助標示：MA3 圖文轉化）。`;
     }
     if (keys.includes("3")) {
-      return `今日課題：四邊形（JM29c 菱形長題目）。${student}計到 8 cm，但漏寫 [property of rhombus] / [Pyth. theorem] 或單位 cm，屬 E 運算執行（輔助標示：MA2 代數運算）。`;
+      return `今日課題：四邊形（JM29c Q5 菱形）。${student}計到 34.5°，但漏寫 [property of rhombus] 或角度單位，屬 E 運算執行（輔助標示：MA2 代數運算）。`;
     }
-    return `今日課題：四邊形（JM29c 菱形長題目）。${student}可以先揭到對角線互相平分；下一步攻第 6 步 ∠AOB = 90° 的 C 概念（輔助標示：MA1 概念理解 / MA5 幾何處理），並補上 [property of rhombus] 同 [Pyth. theorem]。`;
+    return `今日課題：四邊形（JM29c Q5 菱形）。${student}可以先由 AB = AC 計出 ∠ACB = 69°；下一步攻第 8 步 ∠DFC = ∠DFE 的 C 概念（輔助標示：MA1 概念理解 / MA5 幾何處理），最後 ∠DFE = 34.5°。`;
   }
   if (subject === "Maths") {
     if (keys.includes("1") && !keys.includes("2") && !keys.includes("3")) {
@@ -358,21 +358,21 @@ const PAPERS: Record<string, LqPaper> = {
   "JM29.2": {
     code: "JM29.2",
     total: 3,
-    stem: "[LQ 手寫母題] 在菱形 ABCD 中，對角線相交於 O。已知 AB = 17 cm 及 AC = 30 cm，求 BO 的長度。(3分)",
+    stem: "[LQ 手寫母題] CDEF is a rhombus. AFC and BCD are straight lines. AB = AC and ∠BAC = 42°. Find ∠DFE. (3分)",
     steps: [
-      { mark: "1M", status: "got", title: "AO = ½ AC，寫上 property of rhombus", self: "學生自評：🟢 識平分" },
-      { mark: "1M", status: "break", title: "∠AOB = 90°，再次寫 property of rhombus", self: "學生自評：🟡 忘記垂直" },
-      { mark: "1A", status: "lost", title: "BO = 8 cm，並寫 Pyth. theorem 與單位", self: "連帶未寫理由" },
+      { mark: "1M", status: "got", title: "∠ACB = 69°，寫上 base ∠s, isos. △", self: "學生自評：🟢 識用 AB = AC" },
+      { mark: "1M", status: "break", title: "∠DFC = ∠DFE，寫上 property of rhombus", self: "學生自評：🟡 忘記對角線平分內角" },
+      { mark: "1A", status: "lost", title: "∠DFE = 34.5°", self: "連帶未寫理由" },
     ],
     scaffold: [
-      "Step 1（穩袋第 1 個 1M 分）：寫 AO = ½ AC，右側理由 [property of rhombus]",
-      "Step 2（攻克你剛才卡關的 1M 斷點）：在 O 點標 ∠AOB = 90°",
-      "Step 3（衝刺最後 1A 答案分）：用畢氏定理求 BO = 8 cm，並寫 [Pyth. theorem]",
+      "Step 1（穩袋第 1 個 1M 分）：由 AB = AC 寫 ∠ABC = ∠ACB，再代入 42°",
+      "Step 2（攻克你剛才卡關的 1M 斷點）：在 F 點標 ∠DFC = ∠DFE [property of rhombus]",
+      "Step 3（衝刺最後 1A 答案分）：∠DFE = 34.5°",
     ],
     keys: {
-      "1": { label: "1 · C 概念 (失首步 1M)", detail: "不熟菱形性質 [property of rhombus]：唔知對角線垂直 90° 或互相平分", ma: "MA1 概念理解 / MA5 幾何處理" },
-      "2": { label: "2 · R 審題 (失條件 1M)", detail: "漏看全條對角線 AC = 30 cm，未除以 2 就代入畢氏定理", ma: "MA3 圖文轉化" },
-      "3": { label: "3 · E 運算/執行 (有 M 失 A 分)", detail: "計出 8 cm，但漏寫 [property of rhombus] / [Pyth. theorem] 或漏寫單位 cm", ma: "MA2 代數運算" },
+      "1": { label: "1 · C 概念 (失首步 1M)", detail: "不熟菱形性質 [property of rhombus]：唔知對角線平分 ∠EFC，∠DFC = ∠DFE", ma: "MA1 概念理解 / MA5 幾何處理" },
+      "2": { label: "2 · R 審題 (失條件 1M)", detail: "漏看 AB = AC 或 ∠BAC = 42°，未寫 2∠ACB + 42° = 180°", ma: "MA3 圖文轉化" },
+      "3": { label: "3 · E 運算/執行 (有 M 失 A 分)", detail: "計出 34.5°，但漏寫 [property of rhombus] 或角度單位", ma: "MA2 代數運算" },
     },
   },
 };
@@ -424,7 +424,7 @@ export function lqTwinCard(subject: SubjectKey, code: string | null) {
       phases: [
         {
           title: "第一階段 · +48h 明晚 20:00 · 90 秒斷點微切片",
-          body: "不逼學生在手機重做整條 10 分鐘菱形長題。只補 Step 6：∠AOB = 90°，並寫上灰色理由 [property of rhombus]。",
+          body: "不逼學生在手機重做整條 10 分鐘菱形長題。只補 Step 8：∠DFC = ∠DFE，並寫上灰色理由 [property of rhombus]。",
         },
         {
           title: "第二階段 · +7d 下週課前保鮮 · 完整手寫變種 LQ",
@@ -462,15 +462,18 @@ export interface EbookLine {
 }
 
 export const JM29_LINES: EbookLine[] = [
-  { expr: "AB = 17 cm", note: "已知 Given" },
-  { expr: "AO = ½ AC", reason: "property of rhombus", note: "對角線互相平分 · 搶第 1 個 1M", mark: "1M" },
-  { expr: "   = ½ × 30 cm", note: "把整條對角線除以 2" },
-  { expr: "   = 15 cm", note: "AO 的長度" },
-  { expr: "In △AOB,", note: "鎖定直角三角形" },
-  { expr: "∠AOB = 90°", reason: "property of rhombus", note: "全班最常卡關斷點 [C 概念]：忘記菱形對角線垂直", mark: "1M" },
-  { expr: "AO² + BO² = AB²", reason: "Pyth. theorem", note: "畢氏定理列式 · 搶第 2 個 1M", mark: "1M" },
-  { expr: "BO = √(17² − 15²) cm", note: "[R 審題 / E 執行]：誤將 17 當直角邊相加，或漏寫理由／單位" },
-  { expr: "   = 8 cm", note: "最終準確答案 · 穩袋最後 1A", mark: "1A" },
+  { expr: "In △ABC,", note: "先鎖定等腰三角形" },
+  { expr: "∵ AB = AC", note: "已知 Given" },
+  { expr: "∴ ∠ABC = ∠ACB", reason: "base ∠s, isos. △", note: "等腰三角形底角相等 · 搶第 1 個 1M", mark: "1M" },
+  { expr: "∠ABC + ∠ACB + ∠BAC = 180°", reason: "∠ sum of △", note: "三角形內角和" },
+  { expr: "2∠ACB + 42° = 180°", note: "[R 審題]：要用 ∠BAC = 42°，唔好漏代入" },
+  { expr: "2∠ACB = 138°", note: "移項" },
+  { expr: "∠ACB = 69°", note: "底角" },
+  { expr: "∠DFC = ∠DFE", reason: "property of rhombus", note: "全班最常卡關斷點 [C 概念]：菱形對角線平分內角", mark: "1M" },
+  { expr: "∠EFC = ∠ACB", reason: "alt. ∠s, FE ∥ BC", note: "FE 平行 BC，內錯角" },
+  { expr: "∠DFE + ∠DFC = 69°", note: "兩半角加起來是 ∠EFC" },
+  { expr: "2∠DFE = 69°", note: "因為兩半角相等" },
+  { expr: "∠DFE = 34.5°", note: "最終準確答案 · 穩袋最後 1A", mark: "1A" },
 ];
 
 export const EBOOK_TABS: { id: EbookTab; label: string; code: string }[] = [
@@ -483,9 +486,9 @@ export const EBOOK_TABS: { id: EbookTab; label: string; code: string }[] = [
 
 export function ebookHits(keys: string[]) {
   const hits: number[] = [];
-  if (keys.includes("1")) hits.push(2, 6);
-  if (keys.includes("2")) hits.push(3);
-  if (keys.includes("3")) hits.push(8);
+  if (keys.includes("1")) hits.push(3, 8);
+  if (keys.includes("2")) hits.push(5);
+  if (keys.includes("3")) hits.push(12);
   return hits;
 }
 
@@ -493,7 +496,7 @@ export function ebookRescueCard() {
   return {
     kind: "ebook" as const,
     title: "🆘 15s 長題目 (LQ) 拆步搶 M 分急救卡",
-    body: "長題目唔識計到尾？跟住呢 3 步逐格搶 M 分（步驟分），唔好交白卷！e-Book 唔會一次畀晒 9 行答案。",
+    body: "長題目唔識計到尾？跟住呢 3 步逐格搶 M 分（步驟分），唔好交白卷！e-Book 唔會一次畀晒 12 行答案。",
   };
 }
 
