@@ -7,6 +7,7 @@ import { useDemo } from "@/lib/demo-context";
 import { CAPSULES, LQ_STEPS, MA_MAP, QUESTIONS, SEATS, seatProfile } from "@/lib/mock-data";
 import { FOCUS_RADAR, packOf } from "@/lib/curriculum";
 import { calcMastery, LIGHT_META, type HintLevel } from "@/lib/mastery";
+import { StudentEbookCard, StudentEbookMirror } from "./EbookKit";
 import { Card, LightPill, ScoreBar } from "./ui";
 
 export function StudentView() {
@@ -42,6 +43,8 @@ export function StudentView() {
           <p className="num text-lg font-bold text-[#e4c07a]">{demo.starCoins}</p>
         </div>
       </header>
+
+      <StudentEbookMirror />
 
       <div id="hero-score" className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0e2433] p-3">
         <Burst token={demo.burst} />
@@ -470,6 +473,7 @@ function DispatchCard() {
   return (
     <Card id="student-card" kicker="LDC 剛派到這部手機" title={card.title}>
       <p className="text-sm leading-6">{card.body}</p>
+      {card.kind === "ebook" ? <StudentEbookCard /> : null}
       {card.steps ? (
         <div className="mt-2 space-y-1">
           {card.steps.map((step, index) => (

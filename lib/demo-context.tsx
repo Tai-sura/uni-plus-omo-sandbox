@@ -9,7 +9,7 @@ import {
   useReducer,
   type ReactNode,
 } from "react";
-import { activeTopics, lqTwinCard, packOf, teleScript, weakestExam, type SubjectKey } from "./curriculum";
+import { activeTopics, isEbookPoint, lqTwinCard, packOf, teleScript, weakestExam, type EbookTab, type SubjectKey } from "./curriculum";
 import { HERO, PAYOUT_OK, SEATS, TOPICS } from "./mock-data";
 import { lightOf, type HintLevel, type Light } from "./mastery";
 
@@ -31,7 +31,7 @@ export type QStage = "ask" | "eyes" | "steps" | "done";
 export type Freshness = "idle" | "quiz" | "buffer" | "locked";
 
 export interface StudentCard {
-  kind: "ice" | "challenge" | "twin" | "steps";
+  kind: "ice" | "challenge" | "twin" | "steps" | "ebook";
   title: string;
   body: string;
   steps?: string[];
@@ -41,6 +41,7 @@ export interface StudentCard {
 export interface ParentBrief {
   title: string;
   body: string;
+  ink?: boolean;
 }
 
 export interface Callout {
@@ -150,6 +151,13 @@ interface State {
   studentCard: StudentCard | null;
   kocAlert: boolean;
   parentBrief: ParentBrief | null;
+  ebookOpen: boolean;
+  ebookShown: number;
+  ebookBreak: number | null;
+  ebookRun: number;
+  ebookPen: "P" | "H" | "both";
+  ebookTab: EbookTab;
+  kocEbook: boolean;
 }
 
 const initial: State = {
@@ -259,6 +267,13 @@ const initial: State = {
   studentCard: null,
   kocAlert: false,
   parentBrief: null,
+  ebookOpen: false,
+  ebookShown: 0,
+  ebookBreak: null,
+  ebookRun: 0,
+  ebookPen: "both",
+  ebookTab: "rhombus",
+  kocEbook: false,
 };
 
 type Action =
@@ -313,7 +328,10 @@ type Action =
   | { type: "koc-alert" }
   | { type: "parent-brief" }
   | { type: "csm-handoff" }
-  | { type: "brain-pass" };
+  | { type: "brain-pass" }
+  | { type: "ebook-nav"; dir: "next" | "all" | "prev" | "reset" }
+  | { type: "ebook-break"; line: number }
+  | { type: "ebook-sync" };
 
 const ACTS: Record<Act, Callout & { patch: Partial<State> }> = {
   1: {
@@ -539,10 +557,20 @@ function reducer(state: State, action: Action): State {
       const hasR = hotkeys.includes("2");
       const hasE = hotkeys.includes("3");
       const maths = state.subject === "Maths";
+      const ebook = isEbookPoint(state.examCode);
       const scheduled = hasR && hasE;
+      const jump = action.key === "1" ? 6 : action.key === "2" ? 3 : 8;
       return {
         ...state,
         hotkeys,
+        ...(ebook
+          ? {
+              ebookOpen: true,
+              ebookShown: Math.max(state.ebookShown, jump),
+              ebookBreak: jump,
+              ...(!state.ebookOpen ? { split: true, phone: "student" as const, highlight: "student-ebook" } : {}),
+            }
+          : {}),
         ...(scheduled
           ? {
               studentCard: lqTwinCard(state.subject, state.examCode),
@@ -552,10 +580,18 @@ function reducer(state: State, action: Action): State {
             }
           : {}),
         toast: scheduled
-          ? maths
-            ? "2+3 已排程：明晚 90 秒只補 Step 2 的 1M，下週才交完整手寫 LQ。數學科附 MA3 / MA2。"
-            : "2+3 已排程：明晚 90 秒只補斷點 1M，下週才交完整手寫 LQ。物理科只顯示 C / R / E。"
-          : `已記錄熱鍵 ${action.key}。`,
+          ? ebook
+            ? "2+3 已排程：明晚 90 秒只補菱形 Step 6 的 1M，下週才交完整手寫 LQ。輔助標示 MA3 / MA2。"
+            : maths
+              ? "2+3 已排程：明晚 90 秒只補 Step 2 的 1M，下週才交完整手寫 LQ。數學科附 MA3 / MA2。"
+              : "2+3 已排程：明晚 90 秒只補斷點 1M，下週才交完整手寫 LQ。物理科只顯示 C / R / E。"
+          : ebook
+            ? action.key === "1"
+              ? "C 概念：定位 Step 2 與 Step 6，[property of rhombus] 未寫。輔助：MA1 概念理解 / MA5 幾何處理。"
+              : action.key === "2"
+                ? "R 審題：AC = 30 cm 未除以 2。輔助：MA3 圖文轉化。"
+                : "E 執行：8 cm 有答案，但漏寫定理理由或單位 cm。輔助：MA2 代數運算。"
+            : `已記錄熱鍵 ${action.key}。`,
       };
     }
     case "audit":
@@ -747,19 +783,57 @@ function reducer(state: State, action: Action): State {
       return { ...state, coTeach: true, toast: "已接上常規班 Co-Teaching 副講。" };
     case "subject": {
       const pack = packOf(action.subject);
+      const ordered = [...pack.topics].sort((a, b) => Number(b.hot) - Number(a.hot));
       return {
         ...state,
         subject: action.subject,
-        cart: pack.topics.map((topic) => topic.code),
+        cart: ordered.slice(0, 5).map((topic) => topic.code),
         hotkeys: [],
         smokeCode: weakestExam(action.subject).topic,
         examCode: weakestExam(action.subject).code,
         studentCard: null,
+        ebookOpen: false,
+        ebookShown: 0,
+        ebookBreak: null,
+        ebookRun: 0,
+        ebookTab: "rhombus",
+        kocEbook: false,
         toast: action.subject === "Phy"
           ? "已切換物理科。左右屏同步為光的折射與靜電學，不顯示 MA。"
-          : "已切換數學科。左右屏同步為一元二次方程與畢氏定理，MA 只作次級標籤。",
+          : "已切換數學科。今日激活 SM02 一元二次方程與 JM29 四邊形 e-Book。",
       };
     }
+    case "ebook-nav": {
+      const max = 9;
+      const shown =
+        action.dir === "next" ? Math.min(max, state.ebookShown + 1)
+        : action.dir === "prev" ? Math.max(0, state.ebookShown - 1)
+        : action.dir === "all" ? max
+        : 0;
+      return {
+        ...state,
+        ebookOpen: true,
+        ebookShown: shown,
+        ebookBreak: action.dir === "reset" ? null : state.ebookBreak,
+        ...(!state.ebookOpen ? { split: true, phone: "student" as const, highlight: "student-ebook" } : {}),
+      };
+    }
+    case "ebook-break":
+      return {
+        ...state,
+        ebookOpen: true,
+        ebookBreak: action.line,
+        ebookShown: Math.max(state.ebookShown, action.line),
+        toast: `已把第 ${action.line} 行標成這位同學的 LQ 失分斷點。`,
+      };
+    case "ebook-sync":
+      return {
+        ...state,
+        kocEbook: true,
+        split: true,
+        highlight: "mask",
+        toast: "KOC 助教 iPad 已載入 JM29c Page 1 Q4 (0/9 步 + 定理理由標籤)。",
+      };
     case "dispatch-card":
       return {
         ...state,
@@ -777,19 +851,28 @@ function reducer(state: State, action: Action): State {
       };
     case "parent-brief": {
       const pack = packOf(state.subject);
-      const lead = pack.topics.find((topic) => topic.hot) ?? pack.topics[0];
+      const lead = isEbookPoint(state.examCode)
+        ? pack.topics.find((topic) => topic.code === "JM29") ?? pack.topics[0]
+        : pack.topics.find((topic) => topic.hot) ?? pack.topics[0];
       const name = SEATS.find((seat) => seat.id === state.focusId)?.name ?? "鄭*博";
+      const ebook = isEbookPoint(state.examCode);
       return {
         ...state,
         split: true,
         phone: "parent",
         waOpened: true,
         unlocked: true,
-        parentBrief: {
-          title: `${lead.name_zh} · LQ 步驟得分率`,
-          body: `${teleScript(state.subject, state.hotkeys, name)} 長題目佔校內卷 70%，這週的目標是把斷點 1M 補上，由 1 分走向 2M + 1A。`,
-        },
-        toast: "家長手機已打開 LQ 步驟提分戰報。",
+        parentBrief: ebook
+          ? {
+              title: "四邊形 · LQ 步驟得分率",
+              body: `${name}今週喺【四邊形】長題目透過課堂互動 e-Book 練成「先標對角線垂直 90° 搶 1M 步驟分」，並補齊定理理由 [prop. of rhombus]，下次校內 UT 幾何長題目預計可穩袋滿分！`,
+              ink: true,
+            }
+          : {
+              title: `${lead.name_zh} · LQ 步驟得分率`,
+              body: `${teleScript(state.subject, state.hotkeys, name, state.examCode)} 長題目佔校內卷 70%，這週的目標是把斷點 1M 補上，由 1 分走向 2M + 1A。`,
+            },
+        toast: ebook ? "家長手機已打開 e-Book 筆跡快照戰報。" : "家長手機已打開 LQ 步驟提分戰報。",
       };
     }
     case "csm-handoff": {

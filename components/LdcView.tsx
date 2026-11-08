@@ -2,9 +2,10 @@
 
 import { useEffect } from "react";
 import { HERO, SEATS } from "@/lib/mock-data";
-import { findSubtopic, lqPaper, lqStepsCard, lqTwinCard, packOf, teleScript } from "@/lib/curriculum";
+import { ebookHits, ebookRescueCard, findSubtopic, isEbookPoint, lqPaper, lqStepsCard, lqTwinCard, packOf, teleScript } from "@/lib/curriculum";
 import { useDemo } from "@/lib/demo-context";
 import { lightOf } from "@/lib/mastery";
+import { EbookConsole, EbookRevealer } from "./EbookKit";
 import { Card, LightPill } from "./ui";
 
 export function LdcView() {
@@ -16,7 +17,8 @@ export function LdcView() {
   const paper = lqPaper(demo.subject, examPoint.code);
   const seats = demo.classMode === "large" ? SEATS : SEATS.slice(0, 8);
   const combo = demo.hotkeys.includes("2") && demo.hotkeys.includes("3");
-  const script = teleScript(demo.subject, demo.hotkeys, focus.name);
+  const ebook = demo.subject === "Maths" && (demo.smokeCode === "JM29" || isEbookPoint(demo.examCode));
+  const script = teleScript(demo.subject, demo.hotkeys, focus.name, examPoint.code);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -51,13 +53,18 @@ export function LdcView() {
         <p className="text-[11px] text-[#93a4b8]">當前批改考點：{examPoint.code} {examPoint.name}（{examPoint.score}%）</p>
         <p className="mt-1 text-sm">全班校內 UT 預測基準分 M_exam = {pack.mExam}%（已排除 ⚪ 未測課題）</p>
         <p className="mt-1 inline-block rounded-full bg-[#1d4e89] px-2 py-1 text-[11px]">⚖️ 測考真實權重：📝 LQ 長題目步驟分 (70%) + ⚡ MC 概念快測 (30%)</p>
+        {demo.subject === "Maths" ? <p className="mt-1 text-[11px] text-[#e4c07a]">一鍵切換演示課題：SM02 代數 LQ，或 JM29 四邊形幾何 e-Book。</p> : null}
+        {demo.subject === "Maths" ? <div className="mt-2"><EbookConsole /></div> : null}
       </Card>
 
       <Card dense id="heatmap" kicker="課前 Top 2 冒煙" title="點 Level 3 列，切換下方批改考點">
         {demo.regrouped ? <p className="mb-2 rounded-lg bg-[#3a1c22] px-2 py-1 text-sm">陳*軒錯題數已到 {demo.ansonWrongs}。小班看板把他放進「錯 ≥4 題」。</p> : null}
         <div className="grid gap-2 md:grid-cols-2">
           {pack.topics.filter((topic) => topic.hot).map((topic) => (
-            <button key={topic.code} className="rounded-xl bg-black/20 p-2 text-left" onClick={() => demo.dispatch({ type: "patch", patch: { smokeCode: topic.code } })}>
+            <button key={topic.code} className="rounded-xl bg-black/20 p-2 text-left" onClick={() => {
+              const weakest = [...topic.subtopics].sort((a, b) => (a.score ?? 100) - (b.score ?? 100))[0];
+              demo.dispatch({ type: "patch", patch: { smokeCode: topic.code, examCode: weakest.code, hotkeys: [], ebookShown: topic.code === "JM29" ? demo.ebookShown : 0, ebookBreak: topic.code === "JM29" ? demo.ebookBreak : null, ebookOpen: topic.code === "JM29", ebookTab: topic.code === "JM29" ? "rhombus" : demo.ebookTab, ...(topic.code === "JM29" ? { split: true, phone: "student" as const, highlight: "student-ebook" } : {}) } });
+            }}>
               <div className="mb-1 flex items-center justify-between text-xs">
                 <span>{topic.code} {topic.name_zh}</span>
                 <LightPill score={topic.classScore} compact />
@@ -101,7 +108,7 @@ export function LdcView() {
           </button>
         </div>
         <div className="mt-3 grid gap-2 md:grid-cols-3">
-          {bands(demo.classMode, seats, demo.heroScore, demo.ansonWrongs).map((band) => (
+          {bands(demo.classMode, seats, demo.heroScore, demo.ansonWrongs, ebook).map((band) => (
             <div key={band.title} className="rounded-xl bg-black/25 p-2">
               <p className="text-xs font-bold" style={{ color: band.color }}>{band.title}</p>
               <div className="mt-1 flex flex-wrap gap-1">
@@ -114,14 +121,21 @@ export function LdcView() {
               {demo.classMode === "large" && band.action ? (
                 <button
                   className="mt-2 w-full rounded-lg bg-[#1d4e89] px-2 py-2 text-left text-[11px]"
-                  onClick={() => demo.dispatch({
-                    type: "dispatch-card",
-                    card: band.action!.kind === "steps"
-                      ? lqStepsCard(demo.subject, demo.examCode)
-                      : band.action!.kind === "twin"
-                        ? lqTwinCard(demo.subject, demo.examCode)
-                        : band.action!,
-                  })}
+                  onClick={() => {
+                    if (ebook && band.action!.kind === "challenge") {
+                      demo.dispatch({ type: "patch", patch: { ebookTab: "level2", examCode: "JM29.4", smokeCode: "JM29", ebookOpen: true, split: true, phone: "student", highlight: "student-ebook" } });
+                    }
+                    demo.dispatch({
+                      type: "dispatch-card",
+                      card: band.action!.kind === "steps"
+                        ? ebook ? ebookRescueCard() : lqStepsCard(demo.subject, demo.examCode)
+                        : band.action!.kind === "twin"
+                          ? lqTwinCard(demo.subject, ebook ? "JM29.2" : demo.examCode)
+                          : ebook && band.action!.kind === "challenge"
+                            ? { kind: "challenge", title: "🌲 e-Book Level 2 進階綜合證明", body: "已跳到 JM29c 頂部 Level 2。鎖定 JM29.4 正方形與進階證明，不重做菱形基礎。" }
+                            : band.action!,
+                    });
+                  }}
                 >
                   {band.action.title}
                 </button>
@@ -142,13 +156,23 @@ export function LdcView() {
           <div className="mt-2 rounded-xl bg-[#f4efe4] p-2 text-[12px] leading-5 text-[#21180f]">
             <p className="font-bold">📄 實體講義手寫長題目 (LQ) · Marking Scheme 步驟斷點</p>
             <p className="mt-1">{paper.stem}</p>
-            <div className="mt-2 space-y-1">
-              {paper.steps.map((step, index) => (
-                <p key={step.title} className={step.status === "break" ? "rounded bg-[#e24b3c]/20 px-1" : step.status === "got" ? "rounded bg-[#143524]/15 px-1" : "rounded bg-black/5 px-1"}>
-                  Step {index + 1} [{step.mark} {step.status === "got" ? "✅ 已得分" : step.status === "break" ? "❌ 斷點失分" : "⚪ 連帶失分"}]：{step.title}（{step.self}）
-                </p>
-              ))}
-            </div>
+            {isEbookPoint(examPoint.code) ? (
+              <EbookRevealer
+                shown={demo.ebookShown}
+                breakLine={demo.ebookBreak}
+                hits={ebookHits(demo.hotkeys)}
+                onNav={(dir) => demo.dispatch({ type: "ebook-nav", dir })}
+                onBreak={(line) => demo.dispatch({ type: "ebook-break", line })}
+              />
+            ) : (
+              <div className="mt-2 space-y-1">
+                {paper.steps.map((step, index) => (
+                  <p key={step.title} className={step.status === "break" ? "rounded bg-[#e24b3c]/20 px-1" : step.status === "got" ? "rounded bg-[#143524]/15 px-1" : "rounded bg-black/5 px-1"}>
+                    Step {index + 1} [{step.mark} {step.status === "got" ? "✅ 已得分" : step.status === "break" ? "❌ 斷點失分" : "⚪ 連帶失分"}]：{step.title}（{step.self}）
+                  </p>
+                ))}
+              </div>
+            )}
           </div>
           <div className="mt-2 flex flex-wrap gap-1">
             {(["1", "2", "3"] as const).map((key) => (
@@ -174,7 +198,7 @@ export function LdcView() {
           ) : null}
           {combo || demo.studentCard?.kind === "twin" ? (
             <div className="mt-2 rounded-xl bg-black/25 p-2 text-[11px] leading-5 text-[#b6f3d2]">
-              <p>🧬 長題目防棄考雙階段：明晚 20:00 只補 Step 2 的 1M（90 秒）。+7 日才交 {examPoint.code} 完整 3 分手寫 LQ，目標 2M + 1A。</p>
+              <p>{isEbookPoint(examPoint.code) ? "🧬 長題目防棄考雙階段：明晚 20:00 只補菱形 Step 6 的 1M（90 秒）。+7 日才交 JM29.2 完整 3 分手寫 LQ，目標 2M + 1A。" : `🧬 長題目防棄考雙階段：明晚 20:00 只補 Step 2 的 1M（90 秒）。+7 日才交 ${examPoint.code} 完整 3 分手寫 LQ，目標 2M + 1A。`}</p>
             </div>
           ) : null}
         </Card>
@@ -229,7 +253,7 @@ function Audit({ label, value, onChange }: { label: string; value: number; onCha
   );
 }
 
-function bands(mode: "large" | "small", seats: typeof SEATS, hero: number, wrongs: number) {
+function bands(mode: "large" | "small", seats: typeof SEATS, hero: number, wrongs: number, ebook = false) {
   const rows = seats.map((seat) => ({
     ...seat,
     mastery: seat.id === "anson" ? hero : seat.mastery,
@@ -241,19 +265,25 @@ function bands(mode: "large" | "small", seats: typeof SEATS, hero: number, wrong
         title: "≥85% 延伸",
         color: "#8ee0b2",
         rows: rows.filter((row) => row.mastery >= 85),
-        action: { kind: "challenge" as const, title: "🌲 免做基礎・派發 DSE 5** 挑戰題", body: "這題跳過基礎，直接做 5** 挑戰。做完才回到主線。" },
+        action: ebook
+          ? { kind: "challenge" as const, title: "🌲 一鍵跳轉派發 e-Book 頂部「Level 2」進階綜合證明題", body: "已跳到 JM29c 頂部 Level 2。" }
+          : { kind: "challenge" as const, title: "🌲 免做基礎・派發 DSE 5** 挑戰題", body: "這題跳過基礎，直接做 5** 挑戰。做完才回到主線。" },
       },
       {
         title: "50–84% 主線",
         color: "#e0a825",
         rows: rows.filter((row) => row.mastery >= 50 && row.mastery < 85),
-        action: { kind: "twin" as const, title: "🟡 派發 48h 雙胞胎變種題 (鎖定 Level 3 同小節)", body: "同一小節、換一個數字。48 小時內答對，才更新掌握度。" },
+        action: ebook
+          ? { kind: "twin" as const, title: "🟡 派發 48h 雙胞胎：e-Book 同小節 (Rhombus) 90s 關鍵步驟微切片", body: "只補菱形斷點。" }
+          : { kind: "twin" as const, title: "🟡 派發 48h 雙胞胎變種題 (鎖定 Level 3 同小節)", body: "同一小節、換一個數字。48 小時內答對，才更新掌握度。" },
       },
       {
         title: "<50% 微支線",
         color: "#ffb4ac",
         rows: rows.filter((row) => row.mastery < 50),
-        action: { kind: "steps" as const, title: "🔴 強制推送 15s 雙軌分步卡 + Fast Notes", body: "先看 15 秒分步，再看 Fast Notes。做完才回到班上的主線題。" },
+        action: ebook
+          ? { kind: "steps" as const, title: "🔴 強制推送 e-Book「▸ 0/9 逐行提示器」+「✍️ Replay Ink 筆跡回放卡」", body: "逐行揭曉，不一次顯示 9 步。" }
+          : { kind: "steps" as const, title: "🔴 強制推送 15s 雙軌分步卡 + Fast Notes", body: "先看 15 秒分步，再看 Fast Notes。做完才回到班上的主線題。" },
       },
     ];
   }

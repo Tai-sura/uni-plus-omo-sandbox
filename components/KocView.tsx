@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, type PointerEvent as ReactPointerEvent } from "react";
-import { FOCUS_RADAR } from "@/lib/curriculum";
+import { ebookHits, FOCUS_RADAR, JM29_LINES } from "@/lib/curriculum";
 import { ELEMENTS, HERO, SEATS, TLA, seatProfile } from "@/lib/mock-data";
 import { LIGHT_META, lightOf } from "@/lib/mastery";
 import { useDemo } from "@/lib/demo-context";
@@ -74,11 +74,34 @@ export function KocView() {
             <div className="absolute inset-x-0 top-0 z-10 bg-white/55 backdrop-blur-sm" style={{ height: `${demo.mask}%` }}>
               <button className="absolute inset-x-0 bottom-0 h-3 cursor-ns-resize bg-[#1d4e89]" onPointerDown={dragMask} />
             </div>
-            <div className="p-4 text-sm leading-6">
-              <p className="font-bold">聖保羅書院　中三物理　統一測驗</p>
-              <p>姓名：陳大軒　　班別：3C　　學號：18</p>
-              <p className="mt-3">1. 光由水進入空氣，折射角與入射角何者較大？試繪畫法線。</p>
-              <p>2. 解釋為何不會在這個角度發生全反射。</p>
+            <div className="p-3 text-[12px] leading-5">
+              {demo.kocEbook && demo.subject === "Maths" ? (
+                <>
+                  <p className="font-bold">JM29c · Page 1 · Q4 Rhombus</p>
+                  <p>KOC 助教 iPad 已載入 JM29c Page 1 Q4 (0/9 步 + 定理理由標籤)</p>
+                  <p className="mt-1">核對點：1M 平分 · 1M ∠AOB = 90° · 1A BO = 8 cm</p>
+                  <div className="mt-1 space-y-0.5">
+                    {JM29_LINES.map((line, index) => {
+                      const lineNo = index + 1;
+                      const marked = demo.ebookBreak === lineNo || ebookHits(demo.hotkeys).includes(lineNo);
+                      return (
+                        <p key={line.expr} className={marked ? "rounded bg-[#e24b3c]/30 px-1" : ""}>
+                          {lineNo}. {line.expr.trim()}
+                          {line.reason ? <span className="ml-1 rounded bg-[#d5d5d5] px-1 text-[10px] text-[#444]">{line.reason}</span> : null}
+                          {line.mark ? <span className="ml-1 font-bold">{line.mark}</span> : null}
+                        </p>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="font-bold">聖保羅書院　中三物理　統一測驗</p>
+                  <p>姓名：陳大軒　　班別：3C　　學號：18</p>
+                  <p className="mt-3">1. 光由水進入空氣，折射角與入射角何者較大？試繪畫法線。</p>
+                  <p>2. 解釋為何不會在這個角度發生全反射。</p>
+                </>
+              )}
             </div>
           </div>
           <p className="mt-2 text-[11px] text-[#93a4b8]">拖動藍條。現時遮罩 {demo.mask}%。建議帶是 10–16%。</p>

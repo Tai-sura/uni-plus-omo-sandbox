@@ -5,6 +5,7 @@ import { PolarAngleAxis, PolarGrid, Radar, RadarChart, ResponsiveContainer } fro
 import { packOf } from "@/lib/curriculum";
 import { DIAG, HERO, IS_AXES, QUOTES, SEATS } from "@/lib/mock-data";
 import { useDemo } from "@/lib/demo-context";
+import { RhombusInk } from "./EbookKit";
 import { Card, LightPill, ScoreBar } from "./ui";
 
 const VOICE = {
@@ -80,7 +81,9 @@ export function ParentView() {
   const after = demo.focusId === "anson" ? demo.heroScore : focus?.mastery ?? 60;
   const gap = demo.studentUt == null ? null : demo.predictedLive - demo.studentUt;
   const pack = packOf(demo.subject);
-  const lead = pack.topics.find((topic) => topic.hot) ?? pack.topics[0];
+  const lead = demo.parentBrief?.ink
+    ? pack.topics.find((topic) => topic.code === "JM29") ?? pack.topics[0]
+    : pack.topics.find((topic) => topic.hot) ?? pack.topics[0];
 
   return (
     <div className="space-y-3">
@@ -94,6 +97,13 @@ export function ParentView() {
       {demo.parentBrief ? (
         <Card kicker="WhatsApp 戰報卡" title={demo.parentBrief.title}>
           <p className="text-sm leading-6">{demo.parentBrief.body}</p>
+          {demo.parentBrief.ink ? (
+            <div className="mt-2 rounded-xl bg-[#f4efe4] p-2 text-[#21180f]">
+              <p className="text-[12px] font-bold">📄 已附上課堂 e-Book 老師親筆批註快照 · Export PDF with ink</p>
+              <RhombusInk runId={0} pen="both" frame={9} />
+              <p className="text-center text-[11px]">∠AOB = 90° [property of rhombus]</p>
+            </div>
+          ) : null}
         </Card>
       ) : null}
 
