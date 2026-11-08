@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, type PointerEvent as ReactPointerEvent } from "react";
-import { ebookHits, FOCUS_RADAR, JM29_LINES } from "@/lib/curriculum";
+import { EBOOK_URL, ebookHits, findSubtopic, FOCUS_RADAR, isEbookPoint, JM29_LINES, lqPaper } from "@/lib/curriculum";
 import { ELEMENTS, HERO, SEATS, TLA, seatProfile } from "@/lib/mock-data";
 import { LIGHT_META, lightOf } from "@/lib/mastery";
 import { useDemo } from "@/lib/demo-context";
@@ -41,6 +41,8 @@ export function KocView() {
         </div>
       </header>
 
+      {demo.subject === "Maths" ? <StudentPageOnDesk seatName={(SEATS.find((seat) => seat.id === demo.focusId) ?? SEATS[0]).name} /> : null}
+
       <Card id="seat-anson" kicker="X 軸白話指令" title="紅點只告訴你：先安撫，再拆題">
         <div className="grid grid-cols-4 gap-2 md:grid-cols-5">
           {SEATS.map((seat) => {
@@ -75,13 +77,13 @@ export function KocView() {
               <button className="absolute inset-x-0 bottom-0 h-3 cursor-ns-resize bg-[#1d4e89]" onPointerDown={dragMask} />
             </div>
             <div className="p-3 text-[12px] leading-5">
-              {demo.kocEbook && demo.subject === "Maths" ? (
+              {demo.subject === "Maths" && (demo.kocEbook || demo.ebookOpen || isEbookPoint(demo.examCode)) ? (
                 <>
-                  <p className="font-bold">JM29c · Page 1 · Q4 Rhombus</p>
-                  <p>KOC 助教 iPad 已載入 JM29c Page 1 Q4 (0/9 步 + 定理理由標籤)</p>
-                  <p className="mt-1">核對點：1M 平分 · 1M ∠AOB = 90° · 1A BO = 8 cm</p>
+                  <EbookLink />
+                  <p className="mt-2 font-bold">JM29c · Page 1 · Q4 Rhombus · 學生手機 {demo.ebookShown}/9 步</p>
+                  <p>核對點：1M 平分 · 1M ∠AOB = 90° · 1A BO = 8 cm</p>
                   <div className="mt-1 space-y-0.5">
-                    {JM29_LINES.map((line, index) => {
+                    {JM29_LINES.slice(0, Math.max(demo.ebookShown, demo.kocEbook ? 9 : 0)).map((line, index) => {
                       const lineNo = index + 1;
                       const marked = demo.ebookBreak === lineNo || ebookHits(demo.hotkeys).includes(lineNo);
                       return (
@@ -93,6 +95,11 @@ export function KocView() {
                       );
                     })}
                   </div>
+                </>
+              ) : demo.subject === "Maths" ? (
+                <>
+                  <EbookLink />
+                  <StudentPaper />
                 </>
               ) : (
                 <>
@@ -199,8 +206,8 @@ function SeatDossier() {
         {demo.bonusSeats.includes(seat.id) ? <span className="rounded-full bg-[#143524] px-2 py-1 text-[#b6f3d2]">同堂 +5</span> : null}
         {seat.id === "anson" && demo.ansonMissed ? <span className="rounded-full bg-[#5a221c] px-2 py-1">剛才選錯 A</span> : null}
       </div>
-      <p className="mt-2 text-sm leading-6">{profile.blurb}</p>
-      <p className="mt-1 text-[12px] text-[#e4c07a]">{profile.ticket}</p>
+      <p className="mt-2 text-sm leading-6">{demo.subject === "Maths" ? `${seat.name}的學生手機開在數學長題目。右屏頂部那一格跟左屏同一頁，e-Book 連結就在那裡。` : profile.blurb}</p>
+      <p className="mt-1 text-[12px] text-[#e4c07a]">{demo.subject === "Maths" ? `攻堅支援 [重點] · ${seat.name} · SM02.2 展開變號` : profile.ticket}</p>
       <div className="mt-2 space-y-2">
         {topics.map((topic) => (
           <div key={topic.name}>
@@ -215,7 +222,7 @@ function SeatDossier() {
       <div className="mt-3 rounded-lg bg-white/5 p-2">
         <p className="text-[10px] text-[#93a4b8]">掛在這位同學的工單</p>
         {tickets.length ? tickets.map((ticket) => (
-          <p key={ticket.id} className="mt-1 text-[12px] leading-5">{ticket.title}</p>
+          <p key={ticket.id} className="mt-1 text-[12px] leading-5">{demo.subject === "Maths" ? ticket.title.replace("陳*軒折射", "陳*軒 · SM02.2 長題目") : ticket.title}</p>
         )) : <p className="mt-1 text-[12px] leading-5">目前沒有掛名工單，照座位燈色跟節奏。</p>}
       </div>
       {seat.id === "anson" && demo.instructionOpen ? (
@@ -235,6 +242,77 @@ function SeatDossier() {
   );
 }
 
+function openEbook(demo: ReturnType<typeof useDemo>) {
+  demo.dispatch({
+    type: "patch",
+    patch: {
+      ebookOpen: true,
+      smokeCode: "JM29",
+      examCode: "JM29.2",
+      ebookTab: "rhombus",
+      kocEbook: true,
+      split: true,
+      phone: "student",
+      highlight: "student-ebook",
+    },
+  });
+}
+
+function EbookLink() {
+  const demo = useDemo();
+  return (
+    <div className="flex flex-wrap gap-1">
+      <a className="rounded-lg bg-[#1d4e89] px-2 py-1.5 text-[11px] font-bold text-white" href={EBOOK_URL} target="_blank" rel="noreferrer">
+        🔗 新分頁開啟真實 JM29c e-Book
+      </a>
+      <button className="rounded-lg bg-[#21180f] px-2 py-1.5 text-[11px] font-bold text-white" onClick={() => openEbook(demo)}>
+        在學生手機展開這一頁
+      </button>
+    </div>
+  );
+}
+
+function StudentPaper() {
+  const demo = useDemo();
+  const point = findSubtopic(demo.subject, demo.examCode);
+  const paper = lqPaper(demo.subject, demo.examCode);
+  return (
+    <div className="mt-2">
+      <p className="font-bold">學生手機 · {point.code} {point.name}</p>
+      <p className="mt-1">{paper.stem}</p>
+      {paper.steps.map((step) => (
+        <p key={step.title}>{step.mark} {step.title}</p>
+      ))}
+    </div>
+  );
+}
+
+function StudentPageOnDesk({ seatName }: { seatName: string }) {
+  const demo = useDemo();
+  const ebookLive = demo.ebookOpen || demo.smokeCode === "JM29" || isEbookPoint(demo.examCode);
+  const point = findSubtopic(demo.subject, demo.examCode);
+  const paper = lqPaper(demo.subject, demo.examCode);
+  return (
+    <div id="koc-student-page" className="mt-2 rounded-lg border border-[#e4c07a]/50 bg-[#1a1408] p-2">
+      <p className="text-[10px] font-bold text-[#e4c07a]">學生顯示頁 · {seatName}的手機會同時看到</p>
+      {ebookLive ? (
+        <p className="mt-1 text-[12px] leading-5">JM29c · Page 1 · Q4 Rhombus · 已揭 {demo.ebookShown}/9 步</p>
+      ) : (
+        <>
+          <p className="mt-1 text-[12px] font-bold">{point.code} {point.name} · {point.score}%</p>
+          <p className="text-[11px] leading-5">{paper.stem}</p>
+          {paper.steps.map((step) => (
+            <p key={step.title} className="text-[11px] leading-5"><b className="text-[#e4c07a]">{step.mark}</b> {step.title}</p>
+          ))}
+        </>
+      )}
+      <div className="mt-2">
+        <EbookLink />
+      </div>
+    </div>
+  );
+}
+
 function TicketBoard() {
   const demo = useDemo();
   const columns = [
@@ -248,7 +326,7 @@ function TicketBoard() {
         <div key={owner} className="rounded-xl bg-black/20 p-2">
           <p className="text-[11px] text-[#e4c07a]">{label}</p>
           {demo.tickets.filter((ticket) => ticket.owner === owner).map((ticket) => (
-            <p key={ticket.id} className="mt-1 text-[11px] leading-5">{ticket.title}</p>
+            <p key={ticket.id} className="mt-1 text-[11px] leading-5">{demo.subject === "Maths" ? ticket.title.replace("陳*軒折射", "陳*軒 · SM02.2 長題目") : ticket.title}</p>
           ))}
         </div>
       ))}
