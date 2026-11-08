@@ -9,7 +9,8 @@ import {
   useReducer,
   type ReactNode,
 } from "react";
-import { DEFAULT_CART, HERO, PAYOUT_OK, SEATS, TOPICS } from "./mock-data";
+import { activeTopics, packOf, type SubjectKey } from "./curriculum";
+import { HERO, PAYOUT_OK, SEATS, TOPICS } from "./mock-data";
 import { lightOf, type HintLevel, type Light } from "./mastery";
 
 export type Role = "student" | "parent" | "ldc" | "koc" | "csm";
@@ -28,6 +29,17 @@ export interface Ticket {
 }
 export type QStage = "ask" | "eyes" | "steps" | "done";
 export type Freshness = "idle" | "quiz" | "buffer" | "locked";
+
+export interface StudentCard {
+  kind: "ice" | "challenge" | "twin" | "steps";
+  title: string;
+  body: string;
+}
+
+export interface ParentBrief {
+  title: string;
+  body: string;
+}
 
 export interface Callout {
   act: Act;
@@ -129,6 +141,12 @@ interface State {
   eyeWeight: number;
   regrouped: boolean;
   isOpen: string | null;
+  subject: SubjectKey;
+  levelView: "chapter" | "topic";
+  smokeCode: string | null;
+  studentCard: StudentCard | null;
+  kocAlert: boolean;
+  parentBrief: ParentBrief | null;
 }
 
 const initial: State = {
@@ -141,7 +159,7 @@ const initial: State = {
   toast: null,
   includeUntested: false,
   showHiddenAxes: false,
-  cart: DEFAULT_CART,
+  cart: packOf("Phy").topics.map((topic) => topic.code),
   ansonMissed: false,
   ansonWrongs: 2,
   instructionOpen: false,
@@ -231,6 +249,12 @@ const initial: State = {
   eyeWeight: 100,
   regrouped: false,
   isOpen: null,
+  subject: "Phy",
+  levelView: "topic",
+  smokeCode: null,
+  studentCard: null,
+  kocAlert: false,
+  parentBrief: null,
 };
 
 type Action =
@@ -279,7 +303,13 @@ type Action =
   | { type: "arm-link" }
   | { type: "timeout" }
   | { type: "mentor" }
-  | { type: "coteach" };
+  | { type: "coteach" }
+  | { type: "subject"; subject: SubjectKey }
+  | { type: "dispatch-card"; card: StudentCard }
+  | { type: "koc-alert" }
+  | { type: "parent-brief" }
+  | { type: "csm-handoff" }
+  | { type: "brain-pass" };
 
 const ACTS: Record<Act, Callout & { patch: Partial<State> }> = {
   1: {
@@ -504,10 +534,15 @@ function reducer(state: State, action: Action): State {
       const hotkeys = [...state.hotkeys, action.key].slice(-4);
       const hasR = hotkeys.includes("2");
       const hasE = hotkeys.includes("3");
+      const maths = state.subject === "Maths";
       return {
         ...state,
         hotkeys,
-        toast: hasR && hasE ? "熱鍵 2+3 = R+E。已帶出「漏轉 SI 單位」與 MA2 代數運算。" : `已記錄熱鍵 ${action.key}`,
+        toast: hasR && hasE
+          ? maths
+            ? "熱鍵 2+3 = R 審題 + E 運算。數學科才附上 MA3 / MA2。"
+            : "熱鍵 2+3 = R 審題 + E 執行。物理科只顯示 C / R / E。"
+          : `已記錄熱鍵 ${action.key}。`,
       };
     }
     case "audit":
@@ -583,6 +618,7 @@ function reducer(state: State, action: Action): State {
         ...state,
         focusId: action.id,
         phone: "student",
+        split: true,
         instructionOpen: action.id === "anson" ? true : state.instructionOpen,
         highlight: action.id === "anson" ? "seat-anson" : "focus-profile",
         toast: action.id === "anson" ? "已回到陳*軒主線。" : "已打開這位同學的雷達與工單。陳*軒的主線仍保留。",
@@ -696,6 +732,73 @@ function reducer(state: State, action: Action): State {
     case "coteach":
       if (!state.promoted) return { ...state, toast: "要先通過 LDC 審核，才能接 Co-Teaching 副講。" };
       return { ...state, coTeach: true, toast: "已接上常規班 Co-Teaching 副講。" };
+    case "subject": {
+      const pack = packOf(action.subject);
+      return {
+        ...state,
+        subject: action.subject,
+        cart: pack.topics.map((topic) => topic.code),
+        hotkeys: [],
+        smokeCode: pack.topics.find((topic) => topic.hot)?.code ?? null,
+        studentCard: null,
+        toast: action.subject === "Phy"
+          ? "已切換物理科。左右屏同步為光的折射與靜電學，不顯示 MA。"
+          : "已切換數學科。左右屏同步為一元二次方程與畢氏定理，MA 只作次級標籤。",
+      };
+    }
+    case "dispatch-card":
+      return {
+        ...state,
+        studentCard: action.card,
+        split: true,
+        phone: "student",
+        highlight: "student-card",
+        toast: `左屏已收到：${action.card.title}`,
+      };
+    case "koc-alert":
+      return {
+        ...state,
+        kocAlert: true,
+        toast: "已將 4 位 <50% 微支線學生標記為 KOC 座位表高優紅點。",
+      };
+    case "parent-brief": {
+      const pack = packOf(state.subject);
+      const lead = pack.topics.find((topic) => topic.hot) ?? pack.topics[0];
+      return {
+        ...state,
+        split: true,
+        phone: "parent",
+        waOpened: true,
+        unlocked: true,
+        parentBrief: {
+          title: `${lead.name_zh} · C/R/E 突破口`,
+          body: pack.script,
+        },
+        toast: "家長手機已打開剛生成的純中文戰報卡。",
+      };
+    }
+    case "csm-handoff": {
+      const name = SEATS.find((seat) => seat.id === state.focusId)?.name ?? "陳*軒";
+      const title = `高危跟進 [臨場調校] · ${name} · 連續紅燈`;
+      if (state.tickets.some((ticket) => ticket.title === title)) {
+        return { ...state, toast: "這張 CSM 工單已經在名單上。" };
+      }
+      return {
+        ...state,
+        tickets: [...state.tickets, { id: `hazard-${state.tickets.length + 1}`, title, tier: "priority", owner: "csm" }],
+        toast: `已把 ${name} 轉交 CSM 臨場調校工單。`,
+      };
+    }
+    case "brain-pass": {
+      const ready = state.audit.metal >= 60 && state.audit.wood >= 60 && state.audit.fire >= 60;
+      if (!ready) return { ...state, toast: "三軸未過 60。這次是 Review，不發放版稅。" };
+      return {
+        ...state,
+        royalty: 14,
+        eduToken: Math.round((state.eduToken + 1.5) * 10) / 10,
+        toast: "已核准。督導版稅由 12.5 增至 14.0 EduToken，並同步到 KOC。",
+      };
+    }
     default:
       return state;
   }
@@ -759,6 +862,10 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   }, [state.stepRunning, state.stepSeconds]);
 
   const top2 = useMemo(() => {
+    const hot = activeTopics(state.subject)
+      .map((topic) => topic.code)
+      .filter((code) => state.cart.includes(code));
+    if (hot.length) return hot.slice(0, 2);
     return [...state.cart]
       .sort((a, b) => {
         const ta = TOPICS.find((t) => t.id === a)?.urgent ?? 99;
@@ -766,7 +873,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
         return ta - tb;
       })
       .slice(0, 2);
-  }, [state.cart]);
+  }, [state.cart, state.subject]);
 
   const heroScore = useMemo(() => {
     if (state.phase === "decay") return 76;

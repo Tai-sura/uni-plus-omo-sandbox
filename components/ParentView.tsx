@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { PolarAngleAxis, PolarGrid, Radar, RadarChart, ResponsiveContainer } from "recharts";
+import { packOf } from "@/lib/curriculum";
 import { DIAG, HERO, IS_AXES, QUOTES, SEATS } from "@/lib/mock-data";
 import { useDemo } from "@/lib/demo-context";
 import { Card, LightPill, ScoreBar } from "./ui";
@@ -78,15 +79,23 @@ export function ParentView() {
   const before = demo.focusId === "anson" ? 45 : Math.max(30, (focus?.mastery ?? 60) - 18);
   const after = demo.focusId === "anson" ? demo.heroScore : focus?.mastery ?? 60;
   const gap = demo.studentUt == null ? null : demo.predictedLive - demo.studentUt;
+  const pack = packOf(demo.subject);
+  const lead = pack.topics.find((topic) => topic.hot) ?? pack.topics[0];
 
   return (
     <div className="space-y-3">
       <header>
         <p className="text-[11px] text-[#e4c07a]">雙週戰報 · 純中文課題名</p>
-        <h2 className="text-xl font-bold">{focus?.name ?? "陳*軒"} · 光的折射</h2>
+        <h2 className="text-xl font-bold">{focus?.name ?? "陳*軒"} · {lead.name_zh}</h2>
         <p className="text-[11px] text-[#93a4b8]">這裡只有 StarCoins {demo.coins.anson ?? demo.starCoins}。EduToken 不會出現在家長手機。</p>
         <p className="text-[11px] text-[#93a4b8]">{HERO.school} · {HERO.form}</p>
       </header>
+
+      {demo.parentBrief ? (
+        <Card kicker="WhatsApp 戰報卡" title={demo.parentBrief.title}>
+          <p className="text-sm leading-6">{demo.parentBrief.body}</p>
+        </Card>
+      ) : null}
 
       <Card id="parent-report" kicker="看得見的提分" title="紅燈走到現在">
         <div className="grid grid-cols-2 gap-2">

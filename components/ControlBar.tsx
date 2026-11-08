@@ -99,6 +99,15 @@ export function ControlBar() {
             <Gauge size={12} className="mr-1 inline" />
             {demo.split ? "雙屏聯動中" : "開啟雙屏聯動"}
           </button>
+          {(["Phy", "Maths"] as const).map((item) => (
+            <button
+              key={item}
+              onClick={() => demo.dispatch({ type: "subject", subject: item })}
+              className={`rounded-lg px-2.5 py-1 text-xs font-bold ${demo.subject === item ? "bg-[#e4c07a] text-[#1b1406]" : "bg-white/5 text-[#d5deea]"}`}
+            >
+              {item === "Phy" ? "⚡ Physics 物理科" : "📐 Maths 數學科"}
+            </button>
+          ))}
           <div className="ml-auto flex flex-wrap items-center gap-1">
             <Timer size={14} className="text-[#93a4b8]" />
             {PHASES.map((phase) => (

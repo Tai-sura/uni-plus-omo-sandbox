@@ -44,7 +44,7 @@ export function KocView() {
         <div className="grid grid-cols-4 gap-2 md:grid-cols-5">
           {SEATS.map((seat) => {
             const score = seat.id === "anson" ? demo.heroScore : seat.mastery;
-            const missed = seat.id === "anson" && demo.ansonMissed;
+            const missed = (seat.id === "anson" && demo.ansonMissed) || (demo.kocAlert && score < 50);
             const bonus = demo.bonusSeats.includes(seat.id);
             const meta = LIGHT_META[lightOf(score)];
             return (

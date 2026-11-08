@@ -1,42 +1,37 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, ResponsiveContainer } from "recharts";
 import { useDemo } from "@/lib/demo-context";
-import { CAPSULES, LQ_STEPS, MA_MAP, QUESTIONS, TOPICS, seatProfile, type Subject } from "@/lib/mock-data";
+import { CAPSULES, LQ_STEPS, MA_MAP, QUESTIONS, SEATS, seatProfile } from "@/lib/mock-data";
+import { packOf } from "@/lib/curriculum";
 import { calcMastery, LIGHT_META, type HintLevel } from "@/lib/mastery";
 import { Card, LightPill, ScoreBar } from "./ui";
 
 export function StudentView() {
   const demo = useDemo();
-  const [subject, setSubject] = useState<Subject>("Phy");
+  const pack = packOf(demo.subject);
+  const focus = SEATS.find((seat) => seat.id === demo.focusId) ?? SEATS[0];
+  const personal = focus.id === "anson" ? demo.heroScore : focus.mastery;
+  const lead = pack.topics.find((topic) => topic.hot) ?? pack.topics[0];
   const formula = calcMastery(demo.mInit, demo.hint, demo.m48);
 
   const radar = useMemo(() => {
-    return TOPICS.filter((topic) => topic.subject === subject)
-      .filter((topic) => demo.showHiddenAxes || topic.radar_visibility)
-      .filter((topic) => {
-        const score = demo.topicScore(topic.id);
-        if (score != null) return true;
-        if (demo.includeUntested) return true;
-        return demo.showHiddenAxes && !topic.radar_visibility;
-      })
-      .map((topic) => ({
-        axis: topic.shorthand,
-        score: demo.topicScore(topic.id) ?? 0,
+    return pack.chapters
+      .filter((chapter) => chapter.score != null || demo.includeUntested)
+      .map((chapter) => ({
+        axis: chapter.code,
+        score: chapter.score ?? 0,
       }));
-  }, [subject, demo]);
-
-  const optics = ["phy-refl", "phy-refr", "phy-lens"].map((id) => demo.topicScore(id));
-  const opticsAvg = average(optics, demo.includeUntested);
+  }, [pack, demo.includeUntested]);
 
   return (
     <div className="space-y-3">
       <header className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-[11px] text-[#e4c07a]">聖保羅書院 · 中三</p>
-          <h2 className="text-lg font-bold">陳*軒 Anson</h2>
+          <p className="text-[11px] text-[#e4c07a]">聖保羅書院 · 中三 · {pack.label}</p>
+          <h2 className="text-lg font-bold">{focus.name} {focus.en}</h2>
           <button className="mt-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px]" onClick={() => demo.dispatch({ type: "patch", patch: { emi: !demo.emi } })}>
             {demo.emi ? "EMI 英文卷" : "中文卷"}
           </button>
@@ -52,18 +47,18 @@ export function StudentView() {
         <Burst token={demo.burst} />
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[10px] text-[#93a4b8]">Level 2 · SPOP03 · Refract</p>
-            <p className="font-bold">光的折射</p>
+            <p className="text-[10px] text-[#93a4b8]">Level 2 · {lead.code} · {lead.shorthand}</p>
+            <p className="font-bold">{lead.name_zh}</p>
           </div>
-          <LightPill score={demo.heroScore} />
+          <LightPill score={personal} />
         </div>
         <div className="mt-2">
-          <ScoreBar score={demo.heroScore} />
+          <ScoreBar score={personal} />
         </div>
         <p className="mt-2 text-[11px] text-[#e4c07a]">本題計分權重 {demo.eyeWeight}% · 已寫入 Hint h{demo.hint}</p>
         <p className="mt-2 text-[11px] leading-5 text-[#c5d0de]">
           {demo.phase === "day1" && "Day 1 初練已封頂 84% 淺綠。原始分先不寫進深綠，等 48 小時雙胞胎。"}
-          {demo.phase === "h48" && !demo.twinCorrect && "雙胞胎題已送到同一 Level 3：SPOP03.2 折射角與法線。答對才可衝破 85%。"}
+          {demo.phase === "h48" && !demo.twinCorrect && `雙胞胎題已送到同一 Level 3：${lead.subtopics[1]?.code ?? lead.subtopics[0].code}。答對才可衝破 85%。`}
           {demo.phase === "h48" && demo.twinCorrect && "已鎖定 91% 深綠。日常練習豁免，課堂只做保鮮。"}
           {demo.phase === "decay" && "逾期超過 7 日，由深綠衰減至 76% 淺綠。不是歸零，只是失去豁免。"}
           {demo.phase === "preexam" && "考前 14–8 日。先做 30 秒保鮮，再經雙重確認才寫回雷達。"}
@@ -77,7 +72,7 @@ export function StudentView() {
       </div>
 
       {demo.phase === "h48" && !demo.twinCorrect ? (
-        <Card id="twin" kicker="Level 3 雙胞胎" title="SPOP03.2 · 同一知識點，換一個情境">
+        <Card id="twin" kicker="Level 3 雙胞胎" title={`${lead.subtopics[1]?.code ?? lead.code} · 同一知識點，換一個情境`}>
           <p className="text-sm leading-6">光線由玻璃斜向射入空氣。下列哪句正確？</p>
           <div className="mt-2 grid gap-2">
             <button className="rounded-xl bg-[#e24b3c] px-3 py-2 text-left text-sm" onClick={() => demo.dispatch({ type: "twin", ok: false })}>
@@ -115,15 +110,24 @@ export function StudentView() {
         </Card>
       ) : null}
 
-      <Card id="radar" kicker="Level 1–3 雷達" title="手機軸用 shorthand，避免破版">
+      {demo.studentCard ? (
+        <Card id="student-card" kicker="LDC 剛派到這部手機" title={demo.studentCard.title}>
+          <p className="text-sm leading-6">{demo.studentCard.body}</p>
+          <button className="mt-2 rounded-xl bg-white/10 px-3 py-2 text-[11px]" onClick={() => demo.dispatch({ type: "patch", patch: { studentCard: null } })}>
+            我已看完
+          </button>
+        </Card>
+      ) : null}
+
+      <Card id="radar" kicker="Level 1 Chapter" title="章節雷達只作宏觀，不進購物車">
         <div className="mb-2 flex flex-wrap gap-1">
-          {(["Phy", "Maths", "Chem"] as Subject[]).map((item) => (
+          {(["Phy", "Maths"] as const).map((item) => (
             <button
               key={item}
-              onClick={() => setSubject(item)}
-              className={`rounded-full px-2 py-1 text-[11px] ${subject === item ? "bg-[#e4c07a] text-[#1b1406]" : "bg-white/10"}`}
+              onClick={() => demo.dispatch({ type: "subject", subject: item })}
+              className={`rounded-full px-2 py-1 text-[11px] ${demo.subject === item ? "bg-[#e4c07a] text-[#1b1406]" : "bg-white/10"}`}
             >
-              {item === "Phy" ? "物理" : item === "Maths" ? "數學" : "化學"}
+              {item === "Phy" ? "⚡ Physics 物理科" : "📐 Maths 數學科"}
             </button>
           ))}
         </div>
@@ -138,74 +142,82 @@ export function StudentView() {
               </RadarChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-sm text-[#93a4b8]">這個科目可見軸少於 3。打開「包含未測」或「隱藏軸」即可看見差異。</p>
+            <p className="text-sm text-[#93a4b8]">可見章節少於 3。打開「包含未測」即可看見未測章。</p>
           )}
         </div>
-        <div className="grid grid-cols-2 gap-2 text-[11px]">
-          <button
-            className={`rounded-xl px-2 py-2 ${demo.includeUntested ? "bg-[#e24b3c]" : "bg-[#143524]"}`}
-            onClick={() => demo.dispatch({ type: "patch", patch: { includeUntested: !demo.includeUntested } })}
-          >
-            {demo.includeUntested ? "包含灰色未測（當 0 分）" : "排除灰色未測"}
-          </button>
-          <button
-            className={`rounded-xl px-2 py-2 ${demo.showHiddenAxes ? "bg-[#1d4e89]" : "bg-white/10"}`}
-            onClick={() => demo.dispatch({ type: "patch", patch: { showHiddenAxes: !demo.showHiddenAxes } })}
-          >
-            {demo.showHiddenAxes ? "已顯示 radar_visibility 隱藏軸" : "隱藏軸維持關閉"}
-          </button>
-        </div>
+        <button
+          className={`rounded-xl px-2 py-2 text-[11px] ${demo.includeUntested ? "bg-[#e24b3c]" : "bg-[#143524]"}`}
+          onClick={() => demo.dispatch({ type: "patch", patch: { includeUntested: !demo.includeUntested } })}
+        >
+          {demo.includeUntested ? "包含灰色未測（當 0 分）" : "排除灰色未測"}
+        </button>
         <p className="mt-2 text-[11px] leading-5 text-[#c5d0de]">
-          光學章平均（反射 90、折射 {demo.heroScore}、透鏡未測）：
-          <b className="num text-white"> {opticsAvg}%</b>
-          {demo.includeUntested ? "。未教的透鏡被當 0 分，章級燈號被拉低。" : "。未測透鏡不入分母，已學課題不會被冤枉。"}
+          校內 UT 基準 M_exam（未測章不入分母）：
+          <b className="num text-white"> {pack.mExam}%</b>
         </p>
       </Card>
 
-      <Card kicker="Level 2 Topic" title="五色進度只計算這一層">
+      <Card kicker={demo.levelView === "chapter" ? "Level 1 Chapter" : "Level 2 Topic"} title="進度條可在章節與課題之間切換">
+        <div className="mb-2 flex gap-1">
+          <button className={`rounded-full px-2 py-1 text-[11px] ${demo.levelView === "chapter" ? "bg-[#e4c07a] text-[#1b1406]" : "bg-white/10"}`} onClick={() => demo.dispatch({ type: "patch", patch: { levelView: "chapter" } })}>
+            Level 1 Chapter 範疇總覽
+          </button>
+          <button className={`rounded-full px-2 py-1 text-[11px] ${demo.levelView === "topic" ? "bg-[#e4c07a] text-[#1b1406]" : "bg-white/10"}`} onClick={() => demo.dispatch({ type: "patch", patch: { levelView: "topic" } })}>
+            Level 2 Topic 課題進度
+          </button>
+        </div>
         <div className="space-y-2">
-          {TOPICS.filter((topic) => topic.subject === "Phy" || topic.subject === "Maths").slice(0, 8).map((topic) => {
-            const score = demo.topicScore(topic.id);
-            const active = demo.top2.includes(topic.id);
-            return (
-              <div key={topic.id} className="rounded-xl bg-black/20 p-2">
-                <div className="mb-1 flex items-center justify-between gap-2">
-                  <div>
-                    <p className="text-[10px] text-[#93a4b8]">
-                      {topic.topic_code} · {topic.shorthand}
-                      {topic.skill_dimension ? ` · ${topic.skill_dimension}→${topic.cre}` : ""}
-                    </p>
-                    <p className="text-sm font-semibold">
-                      {topic.name_zh}
-                      <span className="ml-1 text-[11px] font-normal text-[#93a4b8]">{topic.name_en}</span>
-                    </p>
+          {demo.levelView === "chapter"
+            ? pack.chapters.map((chapter) => (
+                <div key={chapter.code} className="rounded-xl bg-black/20 p-2">
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-[10px] text-[#93a4b8]">{chapter.code} · {chapter.name_en}</p>
+                      <p className="text-sm font-semibold">{chapter.name_zh}</p>
+                    </div>
+                    <LightPill score={chapter.score} compact />
                   </div>
-                  <div className="flex items-center gap-1">
-                    {active ? <span className="text-[10px] text-[#ffb15a]">Top 2</span> : null}
-                    <LightPill score={score} compact />
-                  </div>
+                  <ScoreBar score={chapter.score} />
                 </div>
-                <ScoreBar score={score} />
-              </div>
-            );
-          })}
+              ))
+            : pack.topics.map((topic) => (
+                <div key={topic.code} className="rounded-xl bg-black/20 p-2">
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-[10px] text-[#93a4b8]">{topic.code} · {topic.shorthand}</p>
+                      <p className="text-sm font-semibold">
+                        {topic.name_zh}
+                        <span className="ml-1 text-[11px] font-normal text-[#93a4b8]">{topic.name_en}</span>
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {topic.hot ? <span className="text-[10px] text-[#ffb15a]">🔥 Top 2</span> : null}
+                      <LightPill score={topic.classScore} compact />
+                    </div>
+                  </div>
+                  <ScoreBar score={topic.classScore} />
+                  {focus.id === "anson" && topic.personal != null && topic.personal !== topic.classScore ? (
+                    <p className="mt-1 text-[10px] text-[#93a4b8]">個人 {topic.personal}% · 班級 {topic.classScore}%</p>
+                  ) : null}
+                </div>
+              ))}
         </div>
       </Card>
 
       {demo.focusId !== "anson" ? <FocusCard /> : null}
-      <Card id="topic-cart" kicker="Topic Cart" title={`已選 ${demo.cart.length}/5 · 今日真的派這兩科`}>
+      <Card id="topic-cart" kicker="Topic Cart" title={`已選 ${pack.topics.filter((topic) => demo.cart.includes(topic.code)).length}/5 · 只收 Level 2`}>
         <div className="flex flex-wrap gap-1.5">
-          {TOPICS.map((topic) => {
-            const on = demo.cart.includes(topic.id);
-            const hot = demo.top2.includes(topic.id);
+          {pack.topics.map((topic) => {
+            const on = demo.cart.includes(topic.code);
+            const hot = topic.hot && on;
             return (
               <button
-                key={topic.id}
-                onClick={() => demo.dispatch({ type: "cart", id: topic.id })}
+                key={topic.code}
+                onClick={() => demo.dispatch({ type: "cart", id: topic.code })}
                 className={`rounded-full px-2 py-1 text-[11px] ${hot ? "bg-[#e24b3c] text-white" : on ? "bg-[#1d4e89]" : "bg-white/10"}`}
               >
                 {hot ? "🔥 " : ""}
-                {topic.name_zh}
+                {topic.code} {topic.name_zh}
               </button>
             );
           })}
@@ -213,7 +225,7 @@ export function StudentView() {
         <SprintBoard />
       </Card>
 
-      <Card id="socratic" kicker="受約束蘇格拉底" title={`${TOPICS.find((topic) => topic.id === demo.top2[0])?.name_zh ?? "光的折射"} · 先題眼，再 15 秒分步卡`}>
+      <Card id="socratic" kicker="受約束蘇格拉底" title={`${lead.name_zh} · 先題眼，再 15 秒分步卡`}>
         <p className="text-sm leading-6">{demo.emi ? topicByTop(demo.top2[0]).stemEn : topicByTop(demo.top2[0]).stem}</p>
         {demo.qStage !== "ask" ? <p className="mt-1 text-[11px] text-[#e4c07a]">題眼：{topicByTop(demo.top2[0]).eye}</p> : null}
         {demo.qStage === "ask" ? (
@@ -344,13 +356,15 @@ export function StudentView() {
       </Card>
 
       <Card id="lq" kicker="LQ 誠信自評" title="未滿 50% 步驟分，不能領幣">
-        <p className="text-[11px] text-[#93a4b8]">SM02.2 二次方程 · 滿分 10 · 門檻 5</p>
+        <p className="text-[11px] text-[#93a4b8]">
+          {demo.subject === "Maths" ? "SM02.2 判別式與根的性質 · 滿分 10 · 門檻 5" : "JPWM07.2 視深與實深計算 · 滿分 10 · 門檻 5"}
+        </p>
         <div className="mt-2 space-y-1">
           {LQ_STEPS.map((step, index) => (
             <label key={step.label} className="flex items-center justify-between gap-2 rounded-lg bg-black/20 px-2 py-1.5 text-sm">
               <span>
                 <input className="mr-2" type="checkbox" checked={demo.lqSteps[index]} onChange={() => demo.dispatch({ type: "lq", index })} />
-                {step.label}
+                {demo.subject === "Maths" ? step.label : step.label.replace(/（MA\d）/g, "")}
               </span>
               <span className="num text-[#e4c07a]">{step.marks}</span>
             </label>
@@ -413,13 +427,17 @@ export function StudentView() {
             ? " 硬閘已啟動：紅燈初練不能一步跳進深綠。"
             : " 取較大混合值，重練一次不會把高分倒掛拉低；紅燈 49 即使重練 100，也到不了 85。"}
         </p>
-        <div className="mt-2 flex flex-wrap gap-1">
-          {MA_MAP.map((item) => (
-            <span key={item.id} className="rounded-full bg-white/10 px-2 py-1 text-[10px]">
-              {item.note}
-            </span>
-          ))}
-        </div>
+        {demo.subject === "Maths" ? (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {MA_MAP.map((item) => (
+              <span key={item.id} className="rounded-full bg-white/10 px-2 py-1 text-[10px]">
+                {item.note}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-2 text-[11px] text-[#93a4b8]">物理科只顯示 C / R / E，這裡不出現 MA1–MA6。</p>
+        )}
       </Card>
     </div>
   );
@@ -452,7 +470,8 @@ function FocusCard() {
 
 function SprintBoard() {
   const demo = useDemo();
-  const names = demo.top2.map((id) => TOPICS.find((topic) => topic.id === id)?.name_zh ?? "課題");
+  const pack = packOf(demo.subject);
+  const names = demo.top2.map((id) => pack.topics.find((topic) => topic.code === id)?.name_zh ?? "課題");
   const slots = demo.exempt
     ? [demo.speedQueue ? "明日首題" : `${names[0] ?? "課題"} 保鮮`, "免", "免", "免", "免"]
     : [demo.speedQueue ? "明日首題" : `${names[0] ?? "課題"} 新`, `${names[0] ?? "課題"} 新`, `${names[1] ?? names[0] ?? "課題"} 新`, "舊", "舊"];
@@ -474,12 +493,6 @@ function SprintBoard() {
       </button>
     </div>
   );
-}
-
-function average(values: Array<number | null>, includeUntested: boolean) {
-  const used = includeUntested ? values.map((value) => value ?? 0) : values.filter((value): value is number => value != null);
-  if (!used.length) return 0;
-  return Math.round(used.reduce((sum, value) => sum + value, 0) / used.length);
 }
 
 function Preset({ label, onClick }: { label: string; onClick: () => void }) {

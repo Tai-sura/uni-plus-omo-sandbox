@@ -1,17 +1,22 @@
 "use client";
 
 import { useEffect } from "react";
-import { HERO, ICE, SEATS } from "@/lib/mock-data";
+import { HERO, SEATS } from "@/lib/mock-data";
+import { creFromHotkeys, packOf, teleScript } from "@/lib/curriculum";
 import { useDemo } from "@/lib/demo-context";
 import { lightOf } from "@/lib/mastery";
-import { Card } from "./ui";
-
-const SCRIPT = "今日課題：二次方程。先睇題目問緊邊個未知數，再決定用因式分解定公式。判別式大於零有兩個實根，等於零有一個重根，小於零無實根。單位同答案要一齊寫，這就是 MA2 代數運算最常漏的一步。";
+import { Card, LightPill } from "./ui";
 
 export function LdcView() {
   const demo = useDemo();
+  const pack = packOf(demo.subject);
+  const focus = SEATS.find((seat) => seat.id === demo.focusId) ?? SEATS[0];
+  const smoke = pack.topics.find((topic) => topic.code === demo.smokeCode) ?? pack.topics.find((topic) => topic.hot) ?? pack.topics[0];
+  const examPoint = smoke.subtopics[0];
   const seats = demo.classMode === "large" ? SEATS : SEATS.slice(0, 8);
+  const marks = creFromHotkeys(demo.hotkeys, demo.subject);
   const combo = demo.hotkeys.includes("2") && demo.hotkeys.includes("3");
+  const script = teleScript(demo.subject, demo.hotkeys);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -31,27 +36,68 @@ export function LdcView() {
 
   return (
     <div className="space-y-3">
-      <header className="flex items-end justify-between">
+      <header className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <p className="text-[11px] text-[#e4c07a]">LDC 指揮官 · {HERO.ldc}</p>
-          <h2 className="text-xl font-bold">課中分流與 60 秒批改</h2>
+          <p className="text-[11px] text-[#e4c07a]">LDC 課堂大腦 · {HERO.ldc}</p>
+          <h2 className="text-xl font-bold">{pack.label}</h2>
         </div>
-        <p className="text-xs text-[#93a4b8]">督導版稅 {demo.royalty} EduToken</p>
+        <p className="text-xs text-[#93a4b8]">督導版稅 {demo.royalty.toFixed(1)} EduToken</p>
       </header>
 
-      <Card id="heatmap" kicker="課前 Top 2 冒煙" title="缺數據就現場做 3 題破冰">
+      <Card kicker="LDC 全局課綱錨點" title="本堂激活課題與校內基準">
+        <div className="mb-2 flex flex-wrap gap-1">
+          {(["Phy", "Maths"] as const).map((item) => (
+            <button
+              key={item}
+              onClick={() => demo.dispatch({ type: "subject", subject: item })}
+              className={`rounded-full px-2 py-1 text-[11px] ${demo.subject === item ? "bg-[#e4c07a] text-[#1b1406]" : "bg-white/10"}`}
+            >
+              {item === "Phy" ? "⚡ Physics 物理科" : "📐 Maths 數學科"}
+            </button>
+          ))}
+        </div>
+        <p className="text-sm leading-6">
+          今日激活：{pack.topics.filter((topic) => topic.hot).map((topic) => `${topic.code} ${topic.name_zh}`).join(" 與 ")}
+        </p>
+        <p className="text-[11px] text-[#93a4b8]">當前聚焦 Level 3：{examPoint.code} {examPoint.name}</p>
+        <p className="mt-1 text-sm">全班校內 UT 預測基準分 M_exam = {pack.mExam}%（已排除 ⚪ 未測課題）</p>
+      </Card>
+
+      <Card id="heatmap" kicker="課前 Top 2 冒煙" title="點進度條展開 Level 3，再派破冰題">
         {demo.regrouped ? <p className="mb-2 rounded-lg bg-[#3a1c22] px-2 py-1 text-sm">陳*軒錯題數已到 {demo.ansonWrongs}。小班看板把他放進「錯 ≥4 題」。</p> : null}
         <div className="grid gap-2 md:grid-cols-2">
-          <Heat label="光的折射" value={demo.iceStep > 0 ? demo.iceHeat.refr : demo.heroScore} />
-          <Heat label="靜電學" value={demo.iceStep > 0 ? demo.iceHeat.elec : 45} />
+          {pack.topics.filter((topic) => topic.hot).map((topic) => (
+            <button key={topic.code} className="rounded-xl bg-black/20 p-2 text-left" onClick={() => demo.dispatch({ type: "patch", patch: { smokeCode: topic.code } })}>
+              <div className="mb-1 flex items-center justify-between text-xs">
+                <span>{topic.code} {topic.name_zh}</span>
+                <LightPill score={topic.classScore} compact />
+              </div>
+              <div className="h-3 overflow-hidden rounded-full bg-white/10">
+                <div className="h-full" style={{ width: `${topic.classScore ?? 0}%`, background: (topic.classScore ?? 0) < 50 ? "#e24b3c" : (topic.classScore ?? 0) < 70 ? "#e0a825" : "#0e8f5b" }} />
+              </div>
+            </button>
+          ))}
         </div>
-        {demo.iceStep < 3 ? (
-          <button className="mt-3 rounded-xl bg-[#1d4e89] px-3 py-2 text-sm" onClick={() => demo.dispatch({ type: "ice" })}>
-            全班作答第 {demo.iceStep + 1} 題：{ICE[demo.iceStep].q}
-          </button>
-        ) : (
-          <p className="mt-2 text-sm text-[#b6f3d2]">3 題都已入帳。上面的熱力是全班結果，不是 toast。</p>
-        )}
+        <div className="mt-3 rounded-xl bg-black/25 p-3">
+          <p className="text-sm font-bold">{smoke.code} {smoke.name_zh}</p>
+          <div className="mt-2 space-y-1">
+            {smoke.subtopics.map((sub) => (
+              <div key={sub.code} className="flex items-start justify-between gap-2 text-[11px]">
+                <span>{sub.code} {sub.name}<br /><span className="text-[#e4c07a]">{sub.cre}</span>{demo.subject === "Maths" && sub.ma ? ` · ${sub.ma}` : ""}</span>
+                <LightPill score={sub.score} compact />
+              </div>
+            ))}
+          </div>
+        </div>
+        <button
+          className="mt-3 rounded-xl bg-[#1d4e89] px-3 py-2 text-sm"
+          onClick={() => {
+            demo.dispatch({ type: "ice" });
+            demo.dispatch({ type: "dispatch-card", card: { kind: "ice", title: pack.iceTitle, body: pack.iceBody } });
+          }}
+        >
+          ⚡ 全班派發第 1 題破冰
+        </button>
         <div className="mt-3 flex flex-wrap gap-2">
           <button className={`rounded-lg px-3 py-1.5 text-xs ${demo.classMode === "large" ? "bg-[#e4c07a] text-[#1b1406]" : "bg-white/10"}`} onClick={() => demo.dispatch({ type: "patch", patch: { classMode: "large" } })}>
             20 人大班 · 按掌握度
@@ -59,95 +105,101 @@ export function LdcView() {
           <button className={`rounded-lg px-3 py-1.5 text-xs ${demo.classMode === "small" ? "bg-[#e4c07a] text-[#1b1406]" : "bg-white/10"}`} onClick={() => demo.dispatch({ type: "patch", patch: { classMode: "small" } })}>
             8 人小班 · 按錯題數
           </button>
-          <button className="rounded-lg bg-[#1d4e89] px-3 py-1.5 text-xs" onClick={() => demo.dispatch({ type: "patch", patch: { batchLogged: true, toast: "舉牌快測已批量錄入。離線結果回寫 8 人，無需逐個點名。" } })}>
-            ⚡ 舉牌／手勢一鍵錄入
-          </button>
         </div>
-        {demo.batchLogged ? <p className="mt-2 text-[11px] text-[#b6f3d2]">快測已入帳。主線繼續，微支線只帶走紅燈與連續錯題。</p> : null}
         <div className="mt-3 grid gap-2 md:grid-cols-3">
           {bands(demo.classMode, seats, demo.heroScore, demo.ansonWrongs).map((band) => (
             <div key={band.title} className="rounded-xl bg-black/25 p-2">
               <p className="text-xs font-bold" style={{ color: band.color }}>{band.title}</p>
-              <p className="mt-1 text-[11px] leading-5 text-[#d5deea]">{band.names.join("、") || "—"}</p>
+              <div className="mt-1 flex flex-wrap gap-1">
+                {band.rows.map((row) => (
+                  <button key={row.id} className="rounded-full bg-white/10 px-2 py-1 text-[11px]" onClick={() => demo.dispatch({ type: "focus", id: row.id })}>
+                    {row.name}
+                  </button>
+                ))}
+              </div>
+              {demo.classMode === "large" && band.action ? (
+                <button className="mt-2 w-full rounded-lg bg-[#1d4e89] px-2 py-2 text-left text-[11px]" onClick={() => demo.dispatch({ type: "dispatch-card", card: band.action! })}>
+                  {band.action.title}
+                </button>
+              ) : null}
             </div>
           ))}
         </div>
+        <button className="mt-3 rounded-xl bg-[#e24b3c] px-3 py-2 text-sm" onClick={() => demo.dispatch({ type: "koc-alert" })}>
+          📲 一鍵派駐 KOC 巡堂急救（&lt;50% 名單）
+        </button>
       </Card>
 
       <div className="grid gap-3 xl:grid-cols-2">
-        <Card id="hotkey" kicker="60 秒複合熱鍵" title="鍵盤 1 / 2 / 3 = C / R / E">
-          <p className="text-[11px] text-[#93a4b8]">學生已完成自評前置。按 2 再按 3，帶出 R+E。</p>
-          <div className="mt-2 flex gap-2">
-            {(["1", "2", "3"] as const).map((key) => (
-              <button key={key} className="num h-12 w-12 rounded-xl bg-white/10 text-lg font-bold" onClick={() => demo.dispatch({ type: "hotkey", key })}>
-                {key}
+        <Card id="hotkey" kicker="60 秒複合熱鍵" title="1 · C 概念　2 · R 審題　3 · E 運算/執行">
+          <p className="text-[11px] leading-5 text-[#93a4b8]">
+            當前批改學生：{focus.name} ｜ 考點：{examPoint.code} {examPoint.name} ｜ 學生自評：🟡 識一半
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {([
+              ["1", "1 · C 概念"],
+              ["2", "2 · R 審題"],
+              ["3", "3 · E 運算/執行"],
+            ] as const).map(([key, label]) => (
+              <button key={key} className="rounded-xl bg-white/10 px-3 py-2 text-sm font-bold" onClick={() => demo.dispatch({ type: "hotkey", key })}>
+                {label}
               </button>
             ))}
             <button className="rounded-xl bg-white/10 px-3 text-xs" onClick={() => demo.dispatch({ type: "patch", patch: { hotkeys: [] } })}>清空</button>
           </div>
           <p className="num mt-2 text-sm">序列：{demo.hotkeys.join(" → ") || "尚未按鍵"}</p>
-          {combo ? (
-            <div className="mt-2 rounded-xl bg-[#f4efe4] p-3 text-sm leading-6 text-[#21180f]">
-              <p className="font-bold">陳*軒 · 二次方程 LQ · 已自評</p>
-              <p>求方程的根，並以 m 表示答案。</p>
-              <p className="mt-2 bg-[#e24b3c]/20 px-1">R · 漏轉 SI 單位</p>
-              <p className="bg-[#e0a825]/40 px-1">E · MA2 代數運算</p>
-              <p className="mt-1 text-[11px]">學生已勾步驟：{demo.lqSteps.filter(Boolean).length}/4。目標 15 秒改完。</p>
+          {demo.hotkeys.length ? (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {marks.tags.map((tag) => (
+                <span key={tag} className="rounded-full bg-[#e24b3c] px-2 py-1 text-[11px]">[{tag.includes("審題") ? "R 審題盲點" : tag.includes("運算") ? "E 運算/執行失誤" : "C 概念盲點"}]</span>
+              ))}
+              {demo.subject === "Maths"
+                ? marks.ma.map((tag) => <span key={tag} className="rounded-full bg-white/10 px-2 py-1 text-[10px]">輔助能力標示：{tag}</span>)
+                : null}
             </div>
+          ) : null}
+          {combo ? (
+            <p className="mt-2 text-[11px] text-[#b6f3d2]">✅ 已自動排程：48h 後推送 {examPoint.code} {examPoint.name} 雙胞胎變種題</p>
           ) : null}
         </Card>
 
-        <Card id="tele" kicker="AI 語音提詞器" title="只顯示純中文 name_zh">
-          <p className="text-[11px] text-[#93a4b8]">課題名用「二次方程」，不混英文 shorthand。空白鍵暫停。</p>
-          <div className="relative mt-2 h-28 overflow-hidden rounded-xl bg-black/40 p-3">
+        <Card id="tele" kicker="🎙️ AI 雙週戰報語音提詞器 (15s 個人化講稿)" title={focus.name}>
+          <p className="text-[11px] text-[#e4c07a]">已自動帶入：純中文課題名 + C/R/E 核心錯因</p>
+          <div className="relative mt-2 h-32 overflow-hidden rounded-xl bg-black/40 p-3">
             <div className={demo.recording && !demo.paused ? "tele-run" : "tele-paused"}>
-              <p className="text-sm leading-7">{SCRIPT}</p>
+              <p className="text-sm leading-7">{script}</p>
             </div>
           </div>
-          <div className="mt-2 flex gap-2">
+          <div className="mt-2 flex flex-wrap gap-2">
             <button className="rounded-lg bg-[#e24b3c] px-3 py-1.5 text-xs" onClick={() => demo.dispatch({ type: "patch", patch: { recording: !demo.recording, paused: false } })}>
               {demo.recording ? "停止" : "開始錄音"}
             </button>
             <button className="rounded-lg bg-white/10 px-3 py-1.5 text-xs" onClick={() => demo.dispatch({ type: "patch", patch: { paused: !demo.paused } })}>
               {demo.paused ? "繼續" : "空白鍵暫停"}
             </button>
+            <button className="rounded-lg bg-[#1d4e89] px-3 py-1.5 text-xs" onClick={() => demo.dispatch({ type: "parent-brief" })}>
+              📲 錄音完成・一鍵生成家長雙週戰報
+            </button>
           </div>
         </Card>
       </div>
 
       <Card id="audit" kicker="10 秒五行審核" title="金 · 木 · 火">
+        <p className="mb-2 text-[11px] text-[#93a4b8]">審核對象：KOC 助教 陳*希（15s 分步卡共創品質）</p>
         <div className="grid gap-3 md:grid-cols-3">
           <Audit label="⚔️ 金 · 概念準確" value={demo.audit.metal} onChange={(value) => demo.dispatch({ type: "audit", key: "metal", value })} />
           <Audit label="🌲 木 · Flow 順暢" value={demo.audit.wood} onChange={(value) => demo.dispatch({ type: "audit", key: "wood", value })} />
           <Audit label="🔥 火 · 鏡頭張力" value={demo.audit.fire} onChange={(value) => demo.dispatch({ type: "audit", key: "fire", value })} />
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-3">
-          <button className="rounded-xl bg-[#e4c07a] px-4 py-2 text-sm font-bold text-[#1b1406]" onClick={() => demo.dispatch({ type: "pass" })}>
-            Pass / Review
+          <button className="rounded-xl bg-[#e4c07a] px-4 py-2 text-sm font-bold text-[#1b1406]" onClick={() => demo.dispatch({ type: "brain-pass" })}>
+            ✅ Pass / 核准發放版稅
           </button>
-          {demo.video === "passed" || (demo.audit.metal >= 60 && demo.audit.wood >= 60 && demo.audit.fire >= 60) ? (
-            <div className="-rotate-6 rounded-md border-2 border-[#e4c07a] px-3 py-2 text-xs font-black text-[#e4c07a]">
-              {HERO.ldc}團隊 × {HERO.koc} 聯合共創
-            </div>
-          ) : (
-            <p className="text-[11px] text-[#93a4b8]">任一軸低於 60 會退回 Review，不蓋章。</p>
-          )}
+          <button className="rounded-xl bg-[#e24b3c] px-4 py-2 text-sm" onClick={() => demo.dispatch({ type: "csm-handoff" })}>
+            ⚠️ 連續紅燈・一鍵轉交 CSM 臨場調校工單
+          </button>
         </div>
       </Card>
-    </div>
-  );
-}
-
-function Heat({ label, value }: { label: string; value: number }) {
-  return (
-    <div>
-      <div className="mb-1 flex justify-between text-xs">
-        <span>{label}</span>
-        <span className="num">{value}%</span>
-      </div>
-      <div className="h-3 overflow-hidden rounded-full bg-white/10">
-        <div className="h-full" style={{ width: `${value}%`, background: value < 50 ? "#e24b3c" : value < 85 ? "#e0a825" : "#0e8f5b" }} />
-      </div>
     </div>
   );
 }
@@ -169,15 +221,30 @@ function bands(mode: "large" | "small", seats: typeof SEATS, hero: number, wrong
   }));
   if (mode === "large") {
     return [
-      { title: "≥85% 延伸", color: "#8ee0b2", names: rows.filter((row) => row.mastery >= 85).map((row) => row.name) },
-      { title: "50–84% 主線", color: "#e0a825", names: rows.filter((row) => row.mastery >= 50 && row.mastery < 85).map((row) => row.name) },
-      { title: "<50% 微支線", color: "#ffb4ac", names: rows.filter((row) => row.mastery < 50).map((row) => row.name) },
+      {
+        title: "≥85% 延伸",
+        color: "#8ee0b2",
+        rows: rows.filter((row) => row.mastery >= 85),
+        action: { kind: "challenge" as const, title: "🌲 免做基礎・派發 DSE 5** 挑戰題", body: "這題跳過基礎，直接做 5** 挑戰。做完才回到主線。" },
+      },
+      {
+        title: "50–84% 主線",
+        color: "#e0a825",
+        rows: rows.filter((row) => row.mastery >= 50 && row.mastery < 85),
+        action: { kind: "twin" as const, title: "🟡 派發 48h 雙胞胎變種題 (鎖定 Level 3 同小節)", body: "同一小節、換一個數字。48 小時內答對，才更新掌握度。" },
+      },
+      {
+        title: "<50% 微支線",
+        color: "#ffb4ac",
+        rows: rows.filter((row) => row.mastery < 50),
+        action: { kind: "steps" as const, title: "🔴 強制推送 15s 雙軌分步卡 + Fast Notes", body: "先看 15 秒分步，再看 Fast Notes。做完才回到班上的主線題。" },
+      },
     ];
   }
   return [
-    { title: "錯 0–1 題", color: "#8ee0b2", names: rows.filter((row) => row.wrongs <= 1).map((row) => row.name) },
-    { title: "錯 2–3 題", color: "#e0a825", names: rows.filter((row) => row.wrongs >= 2 && row.wrongs <= 3).map((row) => row.name) },
-    { title: "錯 ≥4 題", color: "#ffb4ac", names: rows.filter((row) => row.wrongs >= 4).map((row) => row.name) },
+    { title: "錯 0–1 題", color: "#8ee0b2", rows: rows.filter((row) => row.wrongs <= 1), action: null },
+    { title: "錯 2–3 題", color: "#e0a825", rows: rows.filter((row) => row.wrongs >= 2 && row.wrongs <= 3), action: null },
+    { title: "錯 ≥4 題", color: "#ffb4ac", rows: rows.filter((row) => row.wrongs >= 4), action: null },
   ];
 }
 
