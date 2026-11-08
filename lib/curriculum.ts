@@ -227,17 +227,157 @@ export function creFromHotkeys(keys: string[], subject: SubjectKey) {
   return { tags: unique, ma: [...new Set(ma)] };
 }
 
-export function teleScript(subject: SubjectKey, keys: string[]) {
-  const pack = PACKS[subject];
+export function teleScript(subject: SubjectKey, keys: string[], student = "鄭*博") {
+  if (subject === "Maths") {
+    if (keys.includes("1") && !keys.includes("2") && !keys.includes("3")) {
+      return `今日課題：一元二次方程（長題目特訓）。${student}連判別式公式都未寫出，第 1 步 1M 失分，屬於 C 概念（輔助標示：MA1 概念理解）。先補 Δ 先，先唔好追後面兩步。`;
+    }
+    if (keys.includes("2") && keys.includes("3")) {
+      return `今日課題：一元二次方程（長題目特訓）。${student}已經掌握第 1 步列判別式穩攞 1M 步驟分；下一步我哋重點攻克第 2 步展開括號時嘅 R 審題 同 E 運算執行 變號盲點（輔助標示：MA3 圖文轉化 / MA2 代數運算），下次校內 UT 長題目就可以由攞 1 分躍升到袋齊 3 分滿分！`;
+    }
+    if (keys.includes("2")) {
+      return `今日課題：一元二次方程（長題目特訓）。${student}漏看「相異實根」，把條件寫成大於等於零，第 1 個條件 1M 屬 R 審題（輔助標示：MA3 圖文轉化）。`;
+    }
+    if (keys.includes("3")) {
+      return `今日課題：一元二次方程（長題目特訓）。${student}式列對了，但展開正負變號錯，有 M 失 A，屬 E 運算執行（輔助標示：MA2 代數運算）。`;
+    }
+    return `今日課題：一元二次方程（長題目特訓）。${student}已經掌握第 1 步列判別式穩攞 1M 步驟分；下一步我哋重點攻克第 2 步展開括號時嘅 R 審題 同 E 運算執行 變號盲點（輔助標示：MA3 圖文轉化 / MA2 代數運算），下次校內 UT 長題目就可以由攞 1 分躍升到袋齊 3 分滿分！`;
+  }
   if (keys.includes("2") && keys.includes("3")) {
-    return subject === "Maths"
-      ? "今日課題：一元二次方程。剛剛批改亮起 R 審題同 E 運算。相異實根要嚴格大於零，展開時小心變號。對應數學能力：MA3 圖文轉化、MA2 代數運算。"
-      : "今日課題：靜電學。剛剛標成 R 審題同 E 執行。自由電子先會移動，正電荷唔會郁；電場箭頭唔好畫反。呢度只講 C、R、E。";
+    return `今日課題：靜電學（3 分解釋長題目）。${student}操作步驟有分，但成因同結論的 R 審題、E 執行仍會掉 1M。記住只有自由電子會移動，正電荷唔會郁。呢度只講 C、R、E。`;
   }
   if (keys.includes("1")) {
-    return subject === "Maths"
-      ? "今日課題：一元二次方程。C 概念先分清公式同因式分解，再用到先先講 MA1。"
-      : "今日課題：靜電學。C 概念先記住：接地時移動的是自由電子，正電荷不會走。";
+    return `今日課題：靜電學（3 分解釋長題目）。${student}第 1 步把正電荷寫成會移動，1M 成因失分，屬 C 概念理解。正電荷唔會郁。`;
   }
-  return pack.script;
+  return `今日課題：靜電學（3 分解釋長題目）。${student}喺操作同結論步驟已經穩攞 2 分；只要修正第 1 步 C 概念理解，記實「只有自由電子會移動、正電荷唔會郁」，下次校內 UT 呢類 3 分解釋題就可以穩袋滿分！`;
+}
+
+export const FOCUS_RADAR: Record<SubjectKey, { code: string; name: string; score: number }[]> = {
+  Phy: [
+    { code: "JPWM07", name: "光的折射", score: 69 },
+    { code: "SPEM01", name: "靜電學", score: 57 },
+    { code: "JPWM06", name: "光的反射", score: 88 },
+    { code: "SPEM02", name: "電路", score: 64 },
+  ],
+  Maths: [
+    { code: "SM02", name: "一元二次方程", score: 52 },
+    { code: "JM20", name: "畢氏定理", score: 82 },
+    { code: "JM12", name: "恆等式和因式分解", score: 86 },
+    { code: "SM03", name: "函數及其圖像", score: 61 },
+  ],
+};
+
+export interface LqStep {
+  mark: "1M" | "1A";
+  status: "got" | "break" | "lost";
+  title: string;
+  self: string;
+}
+
+export interface LqPaper {
+  code: string;
+  total: number;
+  stem: string;
+  steps: LqStep[];
+  scaffold: string[];
+  keys: Record<"1" | "2" | "3", { label: string; detail: string; ma?: string }>;
+}
+
+const PAPERS: Record<string, LqPaper> = {
+  "SM02.2": {
+    code: "SM02.2",
+    total: 3,
+    stem: "[LQ 手寫母題] 方程 x² − (k−2)x + (k+1) = 0 有兩個相異實根，求 k 的取值範圍。(3分)",
+    steps: [
+      { mark: "1M", status: "got", title: "正確列出判別式條件 Δ > 0", self: "學生自評：🟢 識列式" },
+      { mark: "1M", status: "break", title: "代入 (−(k−2))² − 4(1)(k+1) > 0 展開時漏變號", self: "學生自評：🟡 卡關" },
+      { mark: "1A", status: "lost", title: "解二次不等式 k < 0 或 k > 8", self: "連帶未作答" },
+    ],
+    scaffold: [
+      "Step 1（穩袋第 1 個 1M 分）：圈出「相異實根」，寫 Δ > 0",
+      "Step 2（攻克你剛才卡關的 1M 斷點）：展開 −4(k+1) 時記得負正得負",
+      "Step 3（衝刺最後 1A 答案分）：畫拋物線開口向上，求兩側範圍",
+    ],
+    keys: {
+      "1": { label: "1 · C 概念 (失首步 1M)", detail: "連 Δ 公式都未知，0 分無從入手", ma: "MA1 概念理解" },
+      "2": { label: "2 · R 審題 (失條件 1M)", detail: "漏看「相異實根」，寫成 Δ ≥ 0", ma: "MA3 圖文轉化" },
+      "3": { label: "3 · E 運算/執行 (有 M 失 A 分)", detail: "式列對了，但展開正負變號錯，或不等式方向錯", ma: "MA2 代數運算" },
+    },
+  },
+  "SPEM01.1": {
+    code: "SPEM01.1",
+    total: 3,
+    stem: "[LQ 3分解釋題] 解釋如何利用帶負電塑膠棒，透過感應起電使金屬球帶淨正電荷。(3分)",
+    steps: [
+      { mark: "1M", status: "break", title: "成因：同性電荷相斥，自由電子被排斥至遠端／地球", self: "學生誤寫「正電荷移動」" },
+      { mark: "1M", status: "got", title: "操作：先切斷接地線（移開手指），再移走帶負電棒", self: "學生自評：🟢 次序正確" },
+      { mark: "1A", status: "got", title: "結論：金屬球因缺少電子而帶淨正電荷", self: "學生自評：🟢 結論正確" },
+    ],
+    scaffold: [
+      "Step 1（穩袋第 1 個 1M 分）：先寫「自由電子受排斥移動，正電荷不動」",
+      "Step 2（攻克你剛才卡關的 1M 斷點）：先斷接地，後移棒",
+      "Step 3（衝刺最後 1A 答案分）：總結帶淨正電荷，並檢查單位",
+    ],
+    keys: {
+      "1": { label: "1 · C 概念 (失首步 1M)", detail: "把正電荷寫成會移動，成因 1M 失分" },
+      "2": { label: "2 · R 審題 (失條件 1M)", detail: "沒讀出「帶負電棒」要排斥電子，條件 1M 失分" },
+      "3": { label: "3 · E 運算/執行 (有 M 失 A 分)", detail: "次序寫反：先移棒再鬆手，操作分扣掉" },
+    },
+  },
+};
+
+export function weakestExam(subject: SubjectKey) {
+  const rows = PACKS[subject].topics.flatMap((topic) =>
+    topic.subtopics.map((sub) => ({ ...sub, topic: topic.code })),
+  );
+  return [...rows].sort((a, b) => (a.score ?? 100) - (b.score ?? 100))[0];
+}
+
+export function findSubtopic(subject: SubjectKey, code: string | null) {
+  if (!code) return weakestExam(subject);
+  for (const topic of PACKS[subject].topics) {
+    const sub = topic.subtopics.find((item) => item.code === code);
+    if (sub) return { ...sub, topic: topic.code };
+  }
+  return weakestExam(subject);
+}
+
+export function lqPaper(subject: SubjectKey, code: string | null): LqPaper {
+  const point = findSubtopic(subject, code);
+  if (PAPERS[point.code]) return PAPERS[point.code];
+  const base = PAPERS[subject === "Maths" ? "SM02.2" : "SPEM01.1"];
+  return {
+    ...base,
+    code: point.code,
+    stem: `[LQ 手寫] ${point.code} ${point.name}（${point.score ?? "—"}%）· 沿用 1M / 1M / 1A，滿分 3 分`,
+  };
+}
+
+export function lqStepsCard(subject: SubjectKey, code: string | null) {
+  const paper = lqPaper(subject, code);
+  return {
+    kind: "steps" as const,
+    title: "🆘 15s 長題目 (LQ) 拆步搶 M 分急救卡",
+    body: "長題目唔識計到尾？跟住呢 3 步逐格搶 M 分（步驟分），唔好交白卷！",
+    steps: paper.scaffold,
+  };
+}
+
+export function lqTwinCard(subject: SubjectKey, code: string | null) {
+  const point = findSubtopic(subject, code);
+  return {
+    kind: "twin" as const,
+    title: "🧬 長題目 (LQ) 防棄考雙階段雙胞胎排程",
+    body: `${point.code} ${point.name} 鎖定同一 Level 3。手機只補今日斷點，完整手寫留到回堂。`,
+    phases: [
+      {
+        title: "第一階段 · +48h 明晚 20:00 · 90 秒斷點微切片",
+        body: "不逼學生在手機重做整條 10 分鐘長題目。只針對今日失分的 Step 2（1M 斷點）派關鍵步驟列式／展開填空，確保手機端完成率。",
+      },
+      {
+        title: "第二階段 · +7d 下週課前保鮮 · 完整手寫變種 LQ",
+        body: `回中心課堂或考前派發同考點 ${point.code} 完整 3 分手寫長題目，驗證能否穩奪 2M + 1A 滿分。`,
+      },
+    ],
+  };
 }

@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { HERO, SEATS } from "@/lib/mock-data";
-import { creFromHotkeys, packOf, teleScript } from "@/lib/curriculum";
+import { findSubtopic, lqPaper, lqStepsCard, lqTwinCard, packOf, teleScript } from "@/lib/curriculum";
 import { useDemo } from "@/lib/demo-context";
 import { lightOf } from "@/lib/mastery";
 import { Card, LightPill } from "./ui";
@@ -11,12 +11,12 @@ export function LdcView() {
   const demo = useDemo();
   const pack = packOf(demo.subject);
   const focus = SEATS.find((seat) => seat.id === demo.focusId) ?? SEATS[0];
-  const smoke = pack.topics.find((topic) => topic.code === demo.smokeCode) ?? pack.topics.find((topic) => topic.hot) ?? pack.topics[0];
-  const examPoint = smoke.subtopics[0];
+  const smoke = pack.topics.find((topic) => topic.code === demo.smokeCode) ?? pack.topics.find((topic) => topic.code === findSubtopic(demo.subject, demo.examCode).topic) ?? pack.topics[0];
+  const examPoint = findSubtopic(demo.subject, demo.examCode);
+  const paper = lqPaper(demo.subject, examPoint.code);
   const seats = demo.classMode === "large" ? SEATS : SEATS.slice(0, 8);
-  const marks = creFromHotkeys(demo.hotkeys, demo.subject);
   const combo = demo.hotkeys.includes("2") && demo.hotkeys.includes("3");
-  const script = teleScript(demo.subject, demo.hotkeys);
+  const script = teleScript(demo.subject, demo.hotkeys, focus.name);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -35,35 +35,25 @@ export function LdcView() {
   }, [demo]);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <header className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <p className="text-[11px] text-[#e4c07a]">LDC 課堂大腦 · {HERO.ldc}</p>
-          <h2 className="text-xl font-bold">{pack.label}</h2>
+          <h2 className="text-lg font-bold">{pack.label}</h2>
         </div>
         <p className="text-xs text-[#93a4b8]">督導版稅 {demo.royalty.toFixed(1)} EduToken</p>
       </header>
 
-      <Card kicker="LDC 全局課綱錨點" title="本堂激活課題與校內基準">
-        <div className="mb-2 flex flex-wrap gap-1">
-          {(["Phy", "Maths"] as const).map((item) => (
-            <button
-              key={item}
-              onClick={() => demo.dispatch({ type: "subject", subject: item })}
-              className={`rounded-full px-2 py-1 text-[11px] ${demo.subject === item ? "bg-[#e4c07a] text-[#1b1406]" : "bg-white/10"}`}
-            >
-              {item === "Phy" ? "⚡ Physics 物理科" : "📐 Maths 數學科"}
-            </button>
-          ))}
-        </div>
-        <p className="text-sm leading-6">
+      <Card dense kicker="LDC 全局課綱錨點" title="本堂激活課題與校內基準">
+        <p className="text-sm leading-5">
           今日激活：{pack.topics.filter((topic) => topic.hot).map((topic) => `${topic.code} ${topic.name_zh}`).join(" 與 ")}
         </p>
-        <p className="text-[11px] text-[#93a4b8]">當前聚焦 Level 3：{examPoint.code} {examPoint.name}</p>
+        <p className="text-[11px] text-[#93a4b8]">當前批改考點：{examPoint.code} {examPoint.name}（{examPoint.score}%）</p>
         <p className="mt-1 text-sm">全班校內 UT 預測基準分 M_exam = {pack.mExam}%（已排除 ⚪ 未測課題）</p>
+        <p className="mt-1 inline-block rounded-full bg-[#1d4e89] px-2 py-1 text-[11px]">⚖️ 測考真實權重：📝 LQ 長題目步驟分 (70%) + ⚡ MC 概念快測 (30%)</p>
       </Card>
 
-      <Card id="heatmap" kicker="課前 Top 2 冒煙" title="點進度條展開 Level 3，再派破冰題">
+      <Card dense id="heatmap" kicker="課前 Top 2 冒煙" title="點 Level 3 列，切換下方批改考點">
         {demo.regrouped ? <p className="mb-2 rounded-lg bg-[#3a1c22] px-2 py-1 text-sm">陳*軒錯題數已到 {demo.ansonWrongs}。小班看板把他放進「錯 ≥4 題」。</p> : null}
         <div className="grid gap-2 md:grid-cols-2">
           {pack.topics.filter((topic) => topic.hot).map((topic) => (
@@ -78,14 +68,18 @@ export function LdcView() {
             </button>
           ))}
         </div>
-        <div className="mt-3 rounded-xl bg-black/25 p-3">
+        <div className="mt-2 rounded-xl bg-black/25 p-2">
           <p className="text-sm font-bold">{smoke.code} {smoke.name_zh}</p>
-          <div className="mt-2 space-y-1">
+          <div className="mt-1 space-y-1">
             {smoke.subtopics.map((sub) => (
-              <div key={sub.code} className="flex items-start justify-between gap-2 text-[11px]">
+              <button
+                key={sub.code}
+                className={`flex w-full items-start justify-between gap-2 rounded-lg px-1 py-1 text-left text-[11px] ${demo.examCode === sub.code ? "bg-[#1d4e89]" : ""}`}
+                onClick={() => demo.dispatch({ type: "patch", patch: { examCode: sub.code, smokeCode: smoke.code } })}
+              >
                 <span>{sub.code} {sub.name}<br /><span className="text-[#e4c07a]">{sub.cre}</span>{demo.subject === "Maths" && sub.ma ? ` · ${sub.ma}` : ""}</span>
                 <LightPill score={sub.score} compact />
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -118,7 +112,17 @@ export function LdcView() {
                 ))}
               </div>
               {demo.classMode === "large" && band.action ? (
-                <button className="mt-2 w-full rounded-lg bg-[#1d4e89] px-2 py-2 text-left text-[11px]" onClick={() => demo.dispatch({ type: "dispatch-card", card: band.action! })}>
+                <button
+                  className="mt-2 w-full rounded-lg bg-[#1d4e89] px-2 py-2 text-left text-[11px]"
+                  onClick={() => demo.dispatch({
+                    type: "dispatch-card",
+                    card: band.action!.kind === "steps"
+                      ? lqStepsCard(demo.subject, demo.examCode)
+                      : band.action!.kind === "twin"
+                        ? lqTwinCard(demo.subject, demo.examCode)
+                        : band.action!,
+                  })}
+                >
                   {band.action.title}
                 </button>
               ) : null}
@@ -130,61 +134,73 @@ export function LdcView() {
         </button>
       </Card>
 
-      <div className="grid gap-3 xl:grid-cols-2">
-        <Card id="hotkey" kicker="60 秒複合熱鍵" title="1 · C 概念　2 · R 審題　3 · E 運算/執行">
+      <div className="grid gap-2 xl:grid-cols-2">
+        <Card dense id="hotkey" kicker="60 秒複合熱鍵 · 📝 LQ 長題目步驟拆解 (1M/1A)" title="1 · C　2 · R　3 · E">
           <p className="text-[11px] leading-5 text-[#93a4b8]">
-            當前批改學生：{focus.name} ｜ 考點：{examPoint.code} {examPoint.name} ｜ 學生自評：🟡 識一半
+            當前批改學生：{focus.name} ｜ 考點：{examPoint.code} {examPoint.name} ({examPoint.score}%) ｜ 學生自評：🟡 識一半
           </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {([
-              ["1", "1 · C 概念"],
-              ["2", "2 · R 審題"],
-              ["3", "3 · E 運算/執行"],
-            ] as const).map(([key, label]) => (
-              <button key={key} className="rounded-xl bg-white/10 px-3 py-2 text-sm font-bold" onClick={() => demo.dispatch({ type: "hotkey", key })}>
-                {label}
+          <div className="mt-2 rounded-xl bg-[#f4efe4] p-2 text-[12px] leading-5 text-[#21180f]">
+            <p className="font-bold">📄 實體講義手寫長題目 (LQ) · Marking Scheme 步驟斷點</p>
+            <p className="mt-1">{paper.stem}</p>
+            <div className="mt-2 space-y-1">
+              {paper.steps.map((step, index) => (
+                <p key={step.title} className={step.status === "break" ? "rounded bg-[#e24b3c]/20 px-1" : step.status === "got" ? "rounded bg-[#143524]/15 px-1" : "rounded bg-black/5 px-1"}>
+                  Step {index + 1} [{step.mark} {step.status === "got" ? "✅ 已得分" : step.status === "break" ? "❌ 斷點失分" : "⚪ 連帶失分"}]：{step.title}（{step.self}）
+                </p>
+              ))}
+            </div>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1">
+            {(["1", "2", "3"] as const).map((key) => (
+              <button key={key} className="rounded-xl bg-white/10 px-2 py-2 text-left text-[11px] font-bold" onClick={() => demo.dispatch({ type: "hotkey", key })}>
+                {paper.keys[key].label}
               </button>
             ))}
             <button className="rounded-xl bg-white/10 px-3 text-xs" onClick={() => demo.dispatch({ type: "patch", patch: { hotkeys: [] } })}>清空</button>
           </div>
-          <p className="num mt-2 text-sm">序列：{demo.hotkeys.join(" → ") || "尚未按鍵"}</p>
+          <p className="num mt-1 text-sm">序列：{demo.hotkeys.join(" → ") || "尚未按鍵"}</p>
           {demo.hotkeys.length ? (
-            <div className="mt-2 flex flex-wrap gap-1">
-              {marks.tags.map((tag) => (
-                <span key={tag} className="rounded-full bg-[#e24b3c] px-2 py-1 text-[11px]">[{tag.includes("審題") ? "R 審題盲點" : tag.includes("運算") ? "E 運算/執行失誤" : "C 概念盲點"}]</span>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {demo.hotkeys.map((key) => (
+                <span key={key + paper.code} className="rounded-full bg-[#e24b3c] px-2 py-1 text-[11px]">{paper.keys[key as "1" | "2" | "3"]?.detail}</span>
               ))}
               {demo.subject === "Maths"
-                ? marks.ma.map((tag) => <span key={tag} className="rounded-full bg-white/10 px-2 py-1 text-[10px]">輔助能力標示：{tag}</span>)
+                ? demo.hotkeys.map((key) => {
+                    const ma = paper.keys[key as "1" | "2" | "3"]?.ma;
+                    return ma ? <span key={ma} className="rounded-full bg-white/10 px-2 py-1 text-[10px]">輔助能力標示：{ma}</span> : null;
+                  })
                 : null}
             </div>
           ) : null}
-          {combo ? (
-            <p className="mt-2 text-[11px] text-[#b6f3d2]">✅ 已自動排程：48h 後推送 {examPoint.code} {examPoint.name} 雙胞胎變種題</p>
+          {combo || demo.studentCard?.kind === "twin" ? (
+            <div className="mt-2 rounded-xl bg-black/25 p-2 text-[11px] leading-5 text-[#b6f3d2]">
+              <p>🧬 長題目防棄考雙階段：明晚 20:00 只補 Step 2 的 1M（90 秒）。+7 日才交 {examPoint.code} 完整 3 分手寫 LQ，目標 2M + 1A。</p>
+            </div>
           ) : null}
         </Card>
 
-        <Card id="tele" kicker="🎙️ AI 雙週戰報語音提詞器 (15s 個人化講稿)" title={focus.name}>
-          <p className="text-[11px] text-[#e4c07a]">已自動帶入：純中文課題名 + C/R/E 核心錯因</p>
-          <div className="relative mt-2 h-32 overflow-hidden rounded-xl bg-black/40 p-3">
-            <div className={demo.recording && !demo.paused ? "tele-run" : "tele-paused"}>
-              <p className="text-sm leading-7">{script}</p>
+        <Card dense id="tele" kicker="🎙️ AI 雙週戰報語音提詞器 (15s 個人化講稿)" title={focus.name}>
+          <p className="text-[11px] text-[#e4c07a]">已自動帶入：純中文課題名 + LQ 步驟 + C/R/E</p>
+          <div className="relative mt-1 rounded-xl bg-black/40 p-2">
+            <div className={demo.recording && !demo.paused ? "tele-run" : ""}>
+              <p className="text-sm leading-6">{script}</p>
             </div>
           </div>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <button className="rounded-lg bg-[#e24b3c] px-3 py-1.5 text-xs" onClick={() => demo.dispatch({ type: "patch", patch: { recording: !demo.recording, paused: false } })}>
+          <div className="mt-2 flex flex-wrap gap-1">
+            <button className="rounded-lg bg-[#e24b3c] px-2 py-1.5 text-xs" onClick={() => demo.dispatch({ type: "patch", patch: { recording: !demo.recording, paused: false } })}>
               {demo.recording ? "停止" : "開始錄音"}
             </button>
-            <button className="rounded-lg bg-white/10 px-3 py-1.5 text-xs" onClick={() => demo.dispatch({ type: "patch", patch: { paused: !demo.paused } })}>
+            <button className="rounded-lg bg-white/10 px-2 py-1.5 text-xs" onClick={() => demo.dispatch({ type: "patch", patch: { paused: !demo.paused } })}>
               {demo.paused ? "繼續" : "空白鍵暫停"}
             </button>
-            <button className="rounded-lg bg-[#1d4e89] px-3 py-1.5 text-xs" onClick={() => demo.dispatch({ type: "parent-brief" })}>
-              📲 錄音完成・一鍵生成家長雙週戰報
+            <button className="rounded-lg bg-[#1d4e89] px-2 py-1.5 text-xs" onClick={() => demo.dispatch({ type: "parent-brief" })}>
+              📲 一鍵推送至左屏「家長手機」預覽 LQ 提分戰報
             </button>
           </div>
         </Card>
       </div>
 
-      <Card id="audit" kicker="10 秒五行審核" title="金 · 木 · 火">
+      <Card dense id="audit" kicker="10 秒五行審核" title="金 · 木 · 火">
         <p className="mb-2 text-[11px] text-[#93a4b8]">審核對象：KOC 助教 陳*希（15s 分步卡共創品質）</p>
         <div className="grid gap-3 md:grid-cols-3">
           <Audit label="⚔️ 金 · 概念準確" value={demo.audit.metal} onChange={(value) => demo.dispatch({ type: "audit", key: "metal", value })} />

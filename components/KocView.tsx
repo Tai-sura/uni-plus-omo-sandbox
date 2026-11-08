@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, type PointerEvent as ReactPointerEvent } from "react";
+import { FOCUS_RADAR } from "@/lib/curriculum";
 import { ELEMENTS, HERO, SEATS, TLA, seatProfile } from "@/lib/mock-data";
 import { LIGHT_META, lightOf } from "@/lib/mastery";
 import { useDemo } from "@/lib/demo-context";
@@ -153,14 +154,10 @@ function SeatDossier() {
   const wrongs = seat.id === "anson" ? demo.ansonWrongs : seat.wrongs;
   const coins = demo.coins[seat.id] ?? 0;
   const tickets = demo.tickets.filter((ticket) => ticket.title.includes(seat.name));
-  const topics = seat.id === "anson"
-    ? [
-        { name: "光的折射", score: demo.heroScore },
-        { name: "光的反射", score: 90 },
-        { name: "靜電學", score: 45 },
-        { name: "透鏡成像", score: null },
-      ]
-    : profile.topics;
+  const topics = FOCUS_RADAR[demo.subject].map((topic) => ({
+    name: `${topic.code} ${topic.name}`,
+    score: seat.id === "anson" && demo.subject === "Phy" && topic.code === "JPWM07" ? demo.heroScore : topic.score,
+  }));
   const band = wrongs >= 4 ? "錯 ≥4 題" : wrongs >= 2 ? "錯 2–3 題" : "錯 0–1 題";
 
   return (

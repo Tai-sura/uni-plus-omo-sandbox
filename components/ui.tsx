@@ -10,22 +10,24 @@ export function Card({
   kicker,
   children,
   className = "",
+  dense = false,
 }: {
   id?: string;
   title?: string;
   kicker?: string;
   children: ReactNode;
   className?: string;
+  dense?: boolean;
 }) {
   const { highlight } = useDemo();
   const hot = Boolean(id && highlight === id);
   return (
     <section
       id={id}
-      className={`rounded-2xl border border-white/10 bg-[#102033]/95 p-3 ${hot ? "hot-card" : ""} ${className}`}
+      className={`rounded-2xl border border-white/10 bg-[#102033]/95 ${dense ? "p-2" : "p-3"} ${hot ? "hot-card" : ""} ${className}`}
     >
       {kicker || title ? (
-        <header className="mb-2">
+        <header className={dense ? "mb-1" : "mb-2"}>
           {kicker ? <p className="text-[10px] tracking-[0.16em] text-[#e4c07a] uppercase">{kicker}</p> : null}
           {title ? <h3 className="text-sm font-bold text-white">{title}</h3> : null}
         </header>

@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, ResponsiveContainer } from "recharts";
 import { useDemo } from "@/lib/demo-context";
 import { CAPSULES, LQ_STEPS, MA_MAP, QUESTIONS, SEATS, seatProfile } from "@/lib/mock-data";
-import { packOf } from "@/lib/curriculum";
+import { FOCUS_RADAR, packOf } from "@/lib/curriculum";
 import { calcMastery, LIGHT_META, type HintLevel } from "@/lib/mastery";
 import { Card, LightPill, ScoreBar } from "./ui";
 
@@ -110,14 +110,7 @@ export function StudentView() {
         </Card>
       ) : null}
 
-      {demo.studentCard ? (
-        <Card id="student-card" kicker="LDC 剛派到這部手機" title={demo.studentCard.title}>
-          <p className="text-sm leading-6">{demo.studentCard.body}</p>
-          <button className="mt-2 rounded-xl bg-white/10 px-3 py-2 text-[11px]" onClick={() => demo.dispatch({ type: "patch", patch: { studentCard: null } })}>
-            我已看完
-          </button>
-        </Card>
-      ) : null}
+      {demo.studentCard ? <DispatchCard /> : null}
 
       <Card id="radar" kicker="Level 1 Chapter" title="章節雷達只作宏觀，不進購物車">
         <div className="mb-2 flex flex-wrap gap-1">
@@ -225,7 +218,7 @@ export function StudentView() {
         <SprintBoard />
       </Card>
 
-      <Card id="socratic" kicker="受約束蘇格拉底" title={`${lead.name_zh} · 先題眼，再 15 秒分步卡`}>
+      <Card id="socratic" kicker="受約束蘇格拉底 · 📝 LQ 長題目步驟拆解 (1M/1A)" title={`${lead.name_zh} · 先題眼，再 15 秒分步卡`}>
         <p className="text-sm leading-6">{demo.emi ? topicByTop(demo.top2[0]).stemEn : topicByTop(demo.top2[0]).stem}</p>
         {demo.qStage !== "ask" ? <p className="mt-1 text-[11px] text-[#e4c07a]">題眼：{topicByTop(demo.top2[0]).eye}</p> : null}
         {demo.qStage === "ask" ? (
@@ -450,19 +443,54 @@ function topicByTop(id: string | undefined) {
 function FocusCard() {
   const demo = useDemo();
   const profile = seatProfile(demo.focusId);
+  const radar = FOCUS_RADAR[demo.subject];
   return (
-    <Card id="focus-profile" kicker="這位同學" title={profile.ticket}>
+    <Card id="focus-profile" kicker={`這位同學 · ${demo.subject === "Maths" ? "數學科" : "物理科"}`} title="主線同堂節奏">
       <p className="text-sm leading-6">{profile.blurb}</p>
       <div className="mt-2 space-y-1">
-        {profile.topics.map((topic) => (
-          <div key={topic.name} className="flex items-center justify-between text-sm">
-            <span>{topic.name}</span>
+        {radar.map((topic) => (
+          <div key={topic.code} className="flex items-center justify-between text-sm">
+            <span>{topic.code} {topic.name}</span>
             <LightPill score={topic.score} compact />
           </div>
         ))}
       </div>
       <button className="mt-2 text-[11px] text-[#e4c07a]" onClick={() => demo.dispatch({ type: "focus", id: "anson" })}>
         回到陳*軒主線
+      </button>
+    </Card>
+  );
+}
+
+function DispatchCard() {
+  const demo = useDemo();
+  const card = demo.studentCard;
+  const [open, setOpen] = useState<number | null>(0);
+  if (!card) return null;
+  return (
+    <Card id="student-card" kicker="LDC 剛派到這部手機" title={card.title}>
+      <p className="text-sm leading-6">{card.body}</p>
+      {card.steps ? (
+        <div className="mt-2 space-y-1">
+          {card.steps.map((step, index) => (
+            <button key={step} className="w-full rounded-xl bg-black/25 px-2 py-2 text-left text-[12px] leading-5" onClick={() => setOpen(open === index ? null : index)}>
+              💡 {open === index ? step : step.split("：")[0]}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {card.phases ? (
+        <div className="mt-2 space-y-2">
+          {card.phases.map((phase) => (
+            <div key={phase.title} className="rounded-xl bg-black/25 p-2">
+              <p className="text-[12px] font-bold text-[#e4c07a]">{phase.title}</p>
+              <p className="mt-1 text-[12px] leading-5">{phase.body}</p>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      <button className="mt-2 rounded-xl bg-white/10 px-3 py-2 text-[11px]" onClick={() => demo.dispatch({ type: "patch", patch: { studentCard: null } })}>
+        我已看完
       </button>
     </Card>
   );

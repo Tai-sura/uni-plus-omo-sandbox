@@ -9,7 +9,7 @@ import {
   useReducer,
   type ReactNode,
 } from "react";
-import { activeTopics, packOf, type SubjectKey } from "./curriculum";
+import { activeTopics, lqTwinCard, packOf, teleScript, weakestExam, type SubjectKey } from "./curriculum";
 import { HERO, PAYOUT_OK, SEATS, TOPICS } from "./mock-data";
 import { lightOf, type HintLevel, type Light } from "./mastery";
 
@@ -34,6 +34,8 @@ export interface StudentCard {
   kind: "ice" | "challenge" | "twin" | "steps";
   title: string;
   body: string;
+  steps?: string[];
+  phases?: { title: string; body: string }[];
 }
 
 export interface ParentBrief {
@@ -144,6 +146,7 @@ interface State {
   subject: SubjectKey;
   levelView: "chapter" | "topic";
   smokeCode: string | null;
+  examCode: string | null;
   studentCard: StudentCard | null;
   kocAlert: boolean;
   parentBrief: ParentBrief | null;
@@ -251,7 +254,8 @@ const initial: State = {
   isOpen: null,
   subject: "Phy",
   levelView: "topic",
-  smokeCode: null,
+  smokeCode: "SPEM01",
+  examCode: "SPEM01.1",
   studentCard: null,
   kocAlert: false,
   parentBrief: null,
@@ -535,13 +539,22 @@ function reducer(state: State, action: Action): State {
       const hasR = hotkeys.includes("2");
       const hasE = hotkeys.includes("3");
       const maths = state.subject === "Maths";
+      const scheduled = hasR && hasE;
       return {
         ...state,
         hotkeys,
-        toast: hasR && hasE
+        ...(scheduled
+          ? {
+              studentCard: lqTwinCard(state.subject, state.examCode),
+              split: true,
+              phone: "student" as const,
+              highlight: "student-card",
+            }
+          : {}),
+        toast: scheduled
           ? maths
-            ? "熱鍵 2+3 = R 審題 + E 運算。數學科才附上 MA3 / MA2。"
-            : "熱鍵 2+3 = R 審題 + E 執行。物理科只顯示 C / R / E。"
+            ? "2+3 已排程：明晚 90 秒只補 Step 2 的 1M，下週才交完整手寫 LQ。數學科附 MA3 / MA2。"
+            : "2+3 已排程：明晚 90 秒只補斷點 1M，下週才交完整手寫 LQ。物理科只顯示 C / R / E。"
           : `已記錄熱鍵 ${action.key}。`,
       };
     }
@@ -739,7 +752,8 @@ function reducer(state: State, action: Action): State {
         subject: action.subject,
         cart: pack.topics.map((topic) => topic.code),
         hotkeys: [],
-        smokeCode: pack.topics.find((topic) => topic.hot)?.code ?? null,
+        smokeCode: weakestExam(action.subject).topic,
+        examCode: weakestExam(action.subject).code,
         studentCard: null,
         toast: action.subject === "Phy"
           ? "已切換物理科。左右屏同步為光的折射與靜電學，不顯示 MA。"
@@ -764,6 +778,7 @@ function reducer(state: State, action: Action): State {
     case "parent-brief": {
       const pack = packOf(state.subject);
       const lead = pack.topics.find((topic) => topic.hot) ?? pack.topics[0];
+      const name = SEATS.find((seat) => seat.id === state.focusId)?.name ?? "鄭*博";
       return {
         ...state,
         split: true,
@@ -771,10 +786,10 @@ function reducer(state: State, action: Action): State {
         waOpened: true,
         unlocked: true,
         parentBrief: {
-          title: `${lead.name_zh} · C/R/E 突破口`,
-          body: pack.script,
+          title: `${lead.name_zh} · LQ 步驟得分率`,
+          body: `${teleScript(state.subject, state.hotkeys, name)} 長題目佔校內卷 70%，這週的目標是把斷點 1M 補上，由 1 分走向 2M + 1A。`,
         },
-        toast: "家長手機已打開剛生成的純中文戰報卡。",
+        toast: "家長手機已打開 LQ 步驟提分戰報。",
       };
     }
     case "csm-handoff": {
