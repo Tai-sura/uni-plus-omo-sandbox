@@ -43,6 +43,14 @@ export function KocView() {
         </div>
       </header>
 
+      {demo.drawReview === "pending" ? (
+        <button className="w-full rounded-xl bg-[#3a3014] px-3 py-3 text-left text-sm" onClick={() => demo.dispatch({ type: "draw-review", status: "done" })}>
+          模擬待覆核：學生已完成作圖自檢。按這裡才標成「已覆核」。
+        </button>
+      ) : demo.drawReview === "done" ? (
+        <p className="rounded-xl bg-[#143524] px-3 py-2 text-sm">這次作圖自檢已標為已覆核（模擬）。</p>
+      ) : null}
+
       {demo.subject === "Maths" ? <StudentPageOnDesk seatName={(SEATS.find((seat) => seat.id === demo.focusId) ?? SEATS[0]).name} /> : null}
 
       <Card id="seat-anson" kicker="X 軸白話指令" title="紅點只告訴你：先安撫，再拆題">

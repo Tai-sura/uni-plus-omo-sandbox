@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { JM29_LINES, lqPaper } from "@/lib/curriculum";
+import { noteLabel, reviewCopy, sprintTopics, visibleNotes } from "@/lib/learning-context";
+import { seatFocusTopics } from "@/lib/student-profile";
 import { useDemo } from "@/lib/demo-context";
 import { RefractionInk, RhombusInk } from "./EbookKit";
 
@@ -63,23 +65,23 @@ export function SocraticLab() {
     setSpot(false);
     setShot("none");
     setChecks([false, false]);
-  }, [demo.subject]);
+    setRunning(false);
+  }, [demo.subject, demo.examCode]);
 
-  const write = (trace: string, extra?: { weight?: number; hint?: 0 | 1 | 2 | 3; note?: string; alert?: boolean }) => {
-    const notes = extra?.note && !demo.notes.includes(extra.note) ? [...demo.notes, extra.note] : demo.notes;
+  const write = (trace: string, extra?: { weight?: number; hint?: 0 | 1 | 2 | 3; note?: string }) => {
+    if (extra?.note) demo.dispatch({ type: "note", text: extra.note });
     demo.dispatch({
       type: "patch",
       patch: {
         labTrace: trace,
         eyeWeight: extra?.weight ?? demo.eyeWeight,
         hint: extra?.hint ?? demo.hint,
-        notes,
-        capsules: extra?.note ? true : demo.capsules,
-        kocAlert: extra?.alert ?? demo.kocAlert,
         toast: trace,
       },
     });
   };
+  const currentNotes = visibleNotes(demo.notes, { studentId: demo.focusId, subject: demo.subject });
+  const sprint = sprintTopics(seatFocusTopics(demo.subject, demo.focusId, demo.heroScore, demo.examCode));
 
   const switchPaper = (next: Paper) => {
     setPaper(next);
@@ -116,13 +118,14 @@ export function SocraticLab() {
             </button>
           ))}
         </div>
-        <RhythmBoard rhythm={rhythm} maths={maths} notes={demo.notes} />
+        <RhythmBoard rhythm={rhythm} maths={maths} sprint={sprint.map((topic) => `${topic.code} ${topic.name} ${topic.score}%`)} notes={currentNotes.map((note) => noteLabel(note))} />
         <p className="mt-1 text-[11px] text-[#93a4b8]">這三段時鐘只在艙內。不改控制台的 Day 1、+48h 雙胞胎和衰減分數。</p>
         <div className="mt-3 flex flex-wrap items-end gap-2">
           <button className={`rounded-lg px-2 py-1 text-[11px] font-bold ${paper === "mc" ? "bg-[#e4c07a] text-[#1b1406]" : "bg-white/10"}`} onClick={() => switchPaper("mc")}>⚡ MC 單步 · 止損鎖定 60–90 秒</button>
           <button className={`rounded-lg px-2 py-1 text-[11px] font-bold ${paper === "lq" ? "bg-[#e4c07a] text-[#1b1406]" : "bg-white/10"}`} onClick={() => switchPaper("lq")}>📝 LQ 長題目 70% · 止損鎖定 180–240 秒</button>
           <p className={`num text-3xl font-black ${stopped ? "text-[#ffb4ac]" : "text-white"}`}>{clock}</p>
           <button className="rounded-lg bg-white/10 px-2 py-1 text-[11px]" onClick={() => { setLeft(cap); setRunning(true); }}>由上沿開始</button>
+          <button className="min-h-11 rounded-lg bg-white/10 px-3 py-2 text-[11px]" disabled={left <= 0} onClick={() => setRunning((value) => !value)}>{running ? "暫停" : "繼續"}</button>
           <button className="rounded-lg bg-white/10 px-2 py-1 text-[11px]" onClick={() => { setLeft(0); setRunning(false); write(`${paper === "mc" ? "MC 60–90" : "LQ 180–240"} 秒止損上沿已到。系統停止追問。`); }}>快轉到止損</button>
         </div>
         {stopped ? <p className="mt-1 text-[12px] text-[#ffb4ac]">已到止損上沿。不再無限追問。</p> : <p className="mt-1 text-[11px] text-[#93a4b8]">對外鎖定 {floor}–{cap} 秒。倒數由上沿 {cap} 秒開始，MC 與 LQ 各用自己的區間。</p>}
@@ -139,7 +142,7 @@ export function SocraticLab() {
           {(eye === "narrow" || eye === "retry" ? choices.filter((item) => item[1] || item[0] !== choices[choices.length - 1][0]) : choices).map(([label, ok]) => (
             <button
               key={String(label)}
-              className="rounded-full bg-white/10 px-3 py-2 text-sm"
+              className="min-h-11 rounded-full bg-white/10 px-3 py-2 text-sm"
               onClick={() => {
                 if (ok && eye !== "narrow") {
                   setEye("hit");
@@ -252,7 +255,7 @@ export function SocraticLab() {
               <button className="rounded-lg bg-white/10 px-2 py-1 text-[11px]" onClick={() => setShot("photo")}>📷 拍照留檔（可選）</button>
               <button className="rounded-lg bg-white/10 px-2 py-1 text-[11px]" onClick={() => setShot("skip")}>⏭️ 我已在講義畫好</button>
             </div>
-            {shot !== "none" ? <p className="mt-1 text-[11px]">{shot === "photo" ? "已留本地檔，不強制上傳原圖。" : "跳過上傳，直接對答案。"} 再點圖上的紅色熱區。</p> : null}
+            {shot !== "none" ? <p className="mt-1 text-[11px]">{shot === "photo" ? "照片留檔流程示範，尚未選取照片。不會上傳。" : "跳過上傳，直接對答案。"} 再點圖上的紅色熱區。</p> : null}
             {shot !== "none" && !spot ? (
               maths && rhombus
                 ? <RhombusInk runId={0} pen="both" frame={8} hotspot onHotspot={() => setSpot(true)} />
@@ -282,7 +285,7 @@ export function SocraticLab() {
                       const next: [boolean, boolean] = [...checks];
                       next[index] = !next[index];
                       setChecks(next);
-                      if (next.every(Boolean)) write("作圖 2 點 Checklist 完成。KOC iPad 收到 1 秒覆核。", { alert: true });
+                      if (next.every(Boolean)) demo.dispatch({ type: "draw-review", status: "pending" });
                     }} />
                     {label}
                   </label>
@@ -338,7 +341,8 @@ export function SocraticLab() {
             ))}
           </div>
         )}
-        {demo.notes.length ? <p className="mt-2 text-[11px] text-[#b6f3d2]">閃卡盒：{demo.notes.join(" ｜ ")}</p> : null}
+        {currentNotes.length ? <p className="mt-2 text-[11px] text-[#b6f3d2]">這一科的閃卡：{currentNotes.map((note) => note.text).join(" ｜ ")}</p> : null}
+        {demo.drawReview !== "idle" ? <p className="mt-2 text-[12px] text-[#ffd58a]">{reviewCopy(demo.drawReview)}</p> : null}
       </section>
 
       <section className="rounded-2xl border border-[#e4c07a]/40 bg-[#241c10] p-3 lg:col-span-2">
@@ -353,7 +357,7 @@ export function SocraticLab() {
   );
 }
 
-function RhythmBoard({ rhythm, maths, notes }: { rhythm: Rhythm; maths: boolean; notes: string[] }) {
+function RhythmBoard({ rhythm, maths, sprint, notes }: { rhythm: Rhythm; maths: boolean; sprint: string[]; notes: string[] }) {
   if (rhythm === "fresh") {
     return (
       <div className="mt-2 rounded-xl bg-black/30 p-2 text-sm leading-6">
@@ -362,10 +366,12 @@ function RhythmBoard({ rhythm, maths, notes }: { rhythm: Rhythm; maths: boolean;
     );
   }
   if (rhythm === "sprint") {
-    const hot = maths ? ["SM02 一元二次方程 52%", "JM29 四邊形 44%", "SM03 函數 61%"] : ["JPWM07 光的折射 69%", "SPEM01 靜電學 57%", "SPEM02 電路 64%"];
     return (
       <div className="mt-2 rounded-xl bg-[#3a1c22] p-2 text-sm leading-6">
-        深綠和新課題已隱藏。只留紅／黃燈：{hot.join("、")}。建議 UT 2026-11-12，距今 4 日。閃卡：{notes.length ? notes.join("、") : "尚未存入"}。
+        {sprint.length
+          ? `深綠和新課題已隱藏。只留紅／黃燈：${sprint.join("、")}。`
+          : "這個範圍沒有紅燈或黃燈課題。"}
+        建議 UT 2026-11-12，距今 4 日。閃卡：{notes.length ? notes.join("、") : "尚未存入"}。
       </div>
     );
   }

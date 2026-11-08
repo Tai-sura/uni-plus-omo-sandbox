@@ -9,9 +9,10 @@ import {
   useReducer,
   type ReactNode,
 } from "react";
-import { activeTopics, isEbookPoint, JM29_LINES, leadExam, lqTwinCard, packOf, teleScript, type EbookTab, type SubjectKey } from "./curriculum";
+import { activeTopics, isEbookPoint, JM29_LINES, lqTwinCard, packOf, teleScript, type EbookTab, type SubjectKey } from "./curriculum";
 import { HERO, PAYOUT_OK, SEATS, TOPICS } from "./mock-data";
 import { approveKocPass } from "./koc-pass";
+import { freshCarts, makeNote, reviewCopy, sameNote, swapStudentDraft, switchSubject, type AttemptDraft, type DrawReview, type NoteCard } from "./learning-context";
 import { lightOf, type HintLevel, type Light } from "./mastery";
 
 export type Role = "student" | "parent" | "ldc" | "koc" | "csm";
@@ -63,6 +64,10 @@ interface State {
   includeUntested: boolean;
   showHiddenAxes: boolean;
   cart: string[];
+  carts: Record<SubjectKey, string[]>;
+  cartSource: "free" | "tour";
+  drafts: Record<string, AttemptDraft>;
+  drawReview: DrawReview;
   ansonMissed: boolean;
   ansonWrongs: number;
   instructionOpen: boolean;
@@ -73,7 +78,7 @@ interface State {
   deduct: [boolean, boolean];
   photo: boolean;
   capsules: boolean;
-  notes: string[];
+  notes: NoteCard[];
   twinCorrect: boolean;
   twinWrong: number;
   burst: number;
@@ -178,7 +183,11 @@ const initial: State = {
   tourNotice: null,
   includeUntested: false,
   showHiddenAxes: false,
-  cart: [...packOf("Maths").topics].sort((a, b) => Number(b.hot) - Number(a.hot)).slice(0, 5).map((topic) => topic.code),
+  cart: freshCarts().Maths,
+  carts: freshCarts(),
+  cartSource: "free",
+  drafts: {},
+  drawReview: "idle",
   ansonMissed: false,
   ansonWrongs: 2,
   instructionOpen: false,
@@ -299,7 +308,8 @@ type Action =
   | { type: "correct-answer" }
   | { type: "eye"; kind: "hit" | "miss" }
   | { type: "submit-steps" }
-  | { type: "note" }
+  | { type: "note"; text?: string }
+  | { type: "draw-review"; status: "pending" | "done" }
   | { type: "twin"; ok: boolean }
   | { type: "flash"; ok: boolean }
   | { type: "flash-unlock" }
@@ -493,10 +503,23 @@ function reducer(state: State, action: Action): State {
       return { ...state, toast: action.text };
     case "act": {
       const spec = ACTS[action.act];
+      const subject = spec.patch.subject ?? state.subject;
+      const aligned = switchSubject(state, subject, {
+        mode: "tour",
+        examCode: spec.patch.examCode,
+        smokeCode: spec.patch.smokeCode,
+        cart: spec.patch.cart,
+      });
       const studentTab = action.act === 1 ? "radar" : action.act === 2 || action.act === 3 ? "quest" : state.studentTab;
       const next = {
-        ...state,
+        ...aligned,
         ...spec.patch,
+        carts: aligned.carts,
+        drafts: aligned.drafts,
+        cart: spec.patch.cart ?? aligned.cart,
+        cartSource: "tour" as const,
+        notes: state.notes,
+        starCoins: state.starCoins,
         studentTab,
         phonePulse: state.phonePulse + 1,
         act: action.act,
@@ -527,6 +550,8 @@ function reducer(state: State, action: Action): State {
       };
     }
     case "cart": {
+      const known = packOf(state.subject).topics.some((topic) => topic.code === action.id);
+      if (!known) return { ...state, toast: `${action.id} 不屬於目前這一科，沒有加入購物車。` };
       const has = state.cart.includes(action.id);
       if (has) return { ...state, cart: state.cart.filter((id) => id !== action.id) };
       if (state.cart.length >= 5) return { ...state, toast: "Topic Cart 最多 5 個。請先取消一個，再加入新課題。" };
@@ -536,13 +561,13 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         ansonMissed: true,
-        ansonWrongs: 4,
+        ansonWrongs: Math.min(6, state.ansonWrongs + 1),
         instructionOpen: true,
         qStage: "eyes",
         highlight: "seat-anson",
         regrouped: true,
         classMode: "small",
-        toast: "陳*軒選了 A，錯題數升到 4。84% 仍是淺綠，LDC 已把他改入「錯 ≥4 題」。",
+        toast: "選了 A。錯題數加 1。燈色仍只看掌握度，不會因為這一題改色。",
       };
     case "correct-answer":
       return {
@@ -575,9 +600,10 @@ function reducer(state: State, action: Action): State {
         toast: "已解鎖 3 顆戰術發問膠囊。初練封頂 84% 淺綠，等待 48 小時驗證。",
       };
     case "note": {
-      const note = state.subject === "Maths" ? "SM02.2 · 相異實根要寫 Δ > 0" : "JPWM07.2 · 水入空氣 · 遠離法線";
-      if (state.notes.includes(note)) return state;
-      return { ...state, notes: [...state.notes, note], capsules: true, toast: "1 秒已存入 Tab 4 閃卡庫。" };
+      const text = action.text ?? (state.subject === "Maths" ? "SM02.2 · 相異實根要寫 Δ > 0" : "JPWM07.2 · 水入空氣 · 遠離法線");
+      const card = makeNote(state, text);
+      if (state.notes.some((note) => sameNote(note, card))) return state;
+      return { ...state, notes: [...state.notes, card], capsules: true, toast: "1 秒已存入這位學生、這一科的閃卡庫。" };
     }
     case "twin":
       if (!action.ok) {
@@ -754,18 +780,20 @@ function reducer(state: State, action: Action): State {
         barCollapsed: false,
       };
     }
-    case "focus":
+    case "focus": {
+      const aligned = swapStudentDraft(state, action.id);
+      const name = SEATS.find((seat) => seat.id === action.id)?.name ?? "這位同學";
       return {
-        ...state,
-        focusId: action.id,
+        ...aligned,
         phone: "student",
         studentTab: "radar",
         phonePulse: state.phonePulse + 1,
         split: true,
         instructionOpen: action.id === "anson" ? true : state.instructionOpen,
         highlight: action.id === "anson" ? "seat-anson" : "focus-profile",
-        toast: `左屏已切到${SEATS.find((seat) => seat.id === action.id)?.name ?? "這位同學"}的個人雷達。`,
+        toast: `左屏已切到${name}的個人雷達。`,
       };
+    }
     case "tour-start":
       return {
         ...reducer({ ...state, autoTour: true, tourLeft: 40, entered: true }, { type: "act", act: 1, keepTour: true }),
@@ -886,16 +914,10 @@ function reducer(state: State, action: Action): State {
       if (!state.promoted) return { ...state, toast: "要先通過 LDC 審核，才能接 Co-Teaching 副講。" };
       return { ...state, coTeach: true, toast: "已接上常規班 Co-Teaching 副講。" };
     case "subject": {
-      const pack = packOf(action.subject);
-      const ordered = [...pack.topics].sort((a, b) => Number(b.hot) - Number(a.hot));
-      const exam = leadExam(action.subject);
-      const next = {
-        ...state,
-        subject: action.subject,
-        cart: ordered.slice(0, 5).map((topic) => topic.code),
+      const next = switchSubject(state, action.subject, { mode: "manual" });
+      const switched = next === state ? state : {
+        ...next,
         hotkeys: [],
-        smokeCode: exam.topic,
-        examCode: exam.code,
         studentCard: null,
         ebookOpen: false,
         ebookShown: 0,
@@ -907,11 +929,16 @@ function reducer(state: State, action: Action): State {
           ? "已切換物理科。左右屏同步為光的折射與靜電學，不顯示 MA。"
           : "已切換數學科。今日激活 SM02 一元二次方程與 JM29 四邊形 e-Book。",
       };
-      // Keep an already-open parent report in the same subject as the phone.
-      if (next.parentBrief) {
-        next.parentBrief = parentBriefFor(next.subject, next.examCode, next.hotkeys, next.focusId);
+      if (switched.parentBrief && switched !== state) {
+        return { ...switched, parentBrief: parentBriefFor(switched.subject, switched.examCode, switched.hotkeys, switched.focusId) };
       }
-      return next;
+      return switched;
+    }
+    case "draw-review": {
+      if (action.status === "done" && state.drawReview !== "pending") return state;
+      if (action.status === "pending" && state.drawReview === "done") return state;
+      const labTrace = reviewCopy(action.status);
+      return { ...state, drawReview: action.status, labTrace, toast: labTrace };
     }
     case "ebook-nav": {
       const max = JM29_LINES.length;
@@ -1027,8 +1054,9 @@ export function DemoProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!state.highlight) return;
+    const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
     const node = document.getElementById(state.highlight);
-    node?.scrollIntoView({ behavior: "smooth", block: "center" });
+    node?.scrollIntoView({ behavior, block: "center" });
   }, [state.highlight, state.role, state.split, state.phase, state.unlocked, state.phone, state.desk, state.duo, state.focusId, state.waOpened]);
 
   useEffect(() => {
@@ -1048,17 +1076,12 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   }, [state.stepRunning, state.stepSeconds]);
 
   const top2 = useMemo(() => {
+    const owned = new Set(packOf(state.subject).topics.map((topic) => topic.code));
+    const inSubject = state.cart.filter((code) => owned.has(code));
     const hot = activeTopics(state.subject)
       .map((topic) => topic.code)
-      .filter((code) => state.cart.includes(code));
-    if (hot.length) return hot.slice(0, 2);
-    return [...state.cart]
-      .sort((a, b) => {
-        const ta = TOPICS.find((t) => t.id === a)?.urgent ?? 99;
-        const tb = TOPICS.find((t) => t.id === b)?.urgent ?? 99;
-        return ta - tb;
-      })
-      .slice(0, 2);
+      .filter((code) => inSubject.includes(code));
+    return (hot.length ? hot : inSubject).slice(0, 2);
   }, [state.cart, state.subject]);
 
   const heroScore = useMemo(() => {

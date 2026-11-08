@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
-    "check": "node --experimental-strip-types scripts/check-rules.ts",
+    "check": "node --experimental-strip-types --import ./scripts/register-ts.mjs scripts/check-rules.ts",
     "start": "next start"
   },
   "dependencies": {

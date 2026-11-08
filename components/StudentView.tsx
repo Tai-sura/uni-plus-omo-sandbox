@@ -8,6 +8,7 @@ import { CAPSULES, MA_MAP, QUESTIONS, SEATS, seatProfile } from "@/lib/mock-data
 import { RefractionInk, RhombusInk, StudentEbookCard, StudentEbookMirror } from "./EbookKit";
 import { findSubtopic, lqPaper, packOf } from "@/lib/curriculum";
 import { heroTopicCode, seatChapterScore, seatFocusScore, seatFocusTopics, seatPointScore } from "@/lib/student-profile";
+import { noteLabel, topicNames, visibleNotes } from "@/lib/learning-context";
 import { calcMastery, LIGHT_META, type HintLevel } from "@/lib/mastery";
 import { Card, LightPill, ScoreBar } from "./ui";
 
@@ -15,6 +16,8 @@ export function StudentView() {
   const demo = useDemo();
   const pack = packOf(demo.subject);
   const focus = SEATS.find((seat) => seat.id === demo.focusId) ?? SEATS[0];
+  const hereNotes = visibleNotes(demo.notes, { studentId: focus.id, subject: demo.subject, subtopicId: demo.examCode });
+  const library = visibleNotes(demo.notes, { studentId: focus.id });
   const personal = seatFocusScore(demo.subject, focus.id, demo.heroScore, demo.examCode);
   const personalTopics = seatFocusTopics(demo.subject, focus.id, demo.heroScore, demo.examCode);
   const heroCode = heroTopicCode(demo.subject, demo.examCode);
@@ -290,28 +293,28 @@ export function StudentView() {
         <button className="mb-2 rounded-lg bg-[#e4c07a] px-2 py-1.5 text-[11px] font-bold text-[#1b1406]" onClick={() => demo.dispatch({ type: "patch", patch: { labOpen: true } })}>
           🔍 放大進入「2.3 蘇格拉底應試互動艙」
         </button>
-        {demo.notes.length ? <p className="mb-2 text-[11px] leading-5 text-[#b6f3d2]">Fast Notes：{demo.notes.join(" ｜ ")}</p> : null}
-        <p className="text-sm leading-6">{demo.emi ? topicByTop(demo.top2[0]).stemEn : topicByTop(demo.top2[0]).stem}</p>
-        {demo.qStage !== "ask" ? <p className="mt-1 text-[11px] text-[#e4c07a]">題眼：{topicByTop(demo.top2[0]).eye}</p> : null}
+        {hereNotes.length ? <p className="mb-2 text-[11px] leading-5 text-[#b6f3d2]">Fast Notes：{hereNotes.map((note) => note.text).join(" ｜ ")}</p> : null}
+        <p className="text-sm leading-6">{demo.emi ? topicByTop(demo.top2[0], demo.subject).stemEn : topicByTop(demo.top2[0], demo.subject).stem}</p>
+        {demo.qStage !== "ask" ? <p className="mt-1 text-[11px] text-[#e4c07a]">題眼：{topicByTop(demo.top2[0], demo.subject).eye}</p> : null}
         {demo.qStage === "ask" ? (
           <div className="mt-2 grid gap-2">
             <button className="rounded-xl bg-[#3a1c22] px-3 py-2 text-left text-sm" onClick={() => demo.dispatch({ type: "miss" })}>
-              A. {topicByTop(demo.top2[0]).wrong}
+              A. {topicByTop(demo.top2[0], demo.subject).wrong}
             </button>
             <button className="rounded-xl bg-[#143524] px-3 py-2 text-left text-sm" onClick={() => demo.dispatch({ type: "correct-answer" })}>
-              B. {topicByTop(demo.top2[0]).right}
+              B. {topicByTop(demo.top2[0], demo.subject).right}
             </button>
           </div>
         ) : (
           <div className="mt-2 space-y-2">
-            {demo.ansonMissed ? <p className="text-[11px] text-[#ffb4ac]">已選 A。錯題數 4。84% 仍是淺綠，右屏改看「錯 ≥4 題」。</p> : <p className="text-[11px] text-[#b6f3d2]">已答對，錯題數沒有上升。</p>}
+            {demo.ansonMissed ? <p className="text-[11px] text-[#ffb4ac]">已選 A。錯題數 {demo.ansonWrongs}。燈色仍跟掌握度，不會因這一題改色。</p> : <p className="text-[11px] text-[#b6f3d2]">已答對，錯題數沒有上升。</p>}
             <p className="text-[11px] text-[#93a4b8]">點中真正決定方向的題眼。</p>
             <div className="grid grid-cols-3 gap-1">
               {(demo.subject === "Maths"
                 ? [["兩個相異實根", "hit"], ["一元二次方程", "miss"], ["實數 k", "miss"]]
                 : [["水", "hit"], ["空氣", "miss"], ["入射角", "miss"]]
               ).map(([label, kind]) => (
-                <button key={label} className={`rounded-lg px-1 py-2 text-[11px] ${kind === "hit" ? "bg-[#143524]" : "bg-white/10"}`} onClick={() => demo.dispatch({ type: "eye", kind: kind as "hit" | "miss" })}>
+                <button key={label} className={`min-h-11 rounded-lg px-2 py-2 text-[11px] ${demo.eye === "hit" && kind === "hit" ? "bg-[#143524]" : "bg-white/10"}`} onClick={() => demo.dispatch({ type: "eye", kind: kind as "hit" | "miss" })}>
                   {label}
                 </button>
               ))}
@@ -372,8 +375,8 @@ export function StudentView() {
                   1 秒存入 Fast Notes
                 </button>
                 <div className="flex flex-wrap gap-1">
-                  {demo.notes.map((note) => (
-                    <span key={note} className="rounded-full bg-[#143524] px-2 py-1 text-[10px]">{note}</span>
+                  {hereNotes.map((note) => (
+                    <span key={`${note.subtopicId}-${note.text}`} className="rounded-full bg-[#143524] px-2 py-1 text-[10px]">{note.text}</span>
                   ))}
                 </div>
               </div>
@@ -384,6 +387,9 @@ export function StudentView() {
       </div>
 
       <div className={tab === "notes" ? "space-y-3" : "hidden"}>
+      {library.length ? (
+        <p className="text-[11px] leading-5 text-[#93a4b8]">這位學生的閃卡庫：{library.map((note) => noteLabel(note)).join(" ｜ ")}</p>
+      ) : null}
       <Card id="flash" kicker="Fast Notes 閃卡" title={demo.subject === "Maths" ? "SM02.2 挖空" : "JPWM07.2 挖空"}>
         <div className={`rounded-xl p-3 transition ${demo.flash === "flipped" ? "bg-[#143524]" : "bg-black/30"}`}>
           <p className="text-sm leading-6">
@@ -488,7 +494,7 @@ export function StudentView() {
             ["radar", "🕸️ 雷達"],
             ["quest", "⚔️ 破關"],
             ["cart", "🛒 選課"],
-            ["notes", `⚡ 閃卡${demo.notes.length ? ` ${demo.notes.length}` : ""}`],
+            ["notes", `⚡ 閃卡${library.length ? ` ${library.length}` : ""}`],
           ] as const
         ).map(([id, label]) => (
           <button key={id} className={`rounded-lg px-1 py-2 text-[10px] font-bold ${tab === id ? "bg-[#e4c07a] text-[#1b1406]" : "bg-white/10"}`} onClick={() => demo.dispatch({ type: "patch", patch: { studentTab: id } })}>
@@ -501,10 +507,16 @@ export function StudentView() {
   );
 }
 
-function topicByTop(id: string | undefined) {
-  if (id && QUESTIONS[id]) return QUESTIONS[id];
-  if (id?.startsWith("SM") || id?.startsWith("JM")) return QUESTIONS["math-quad"];
-  return QUESTIONS["phy-refr"];
+function topicByTop(id: string | undefined, subject: "Maths" | "Phy") {
+  const own = subject === "Maths" ? QUESTIONS["math-quad"] : QUESTIONS["phy-refr"];
+  if (!id) return own;
+  const otherSubject = subject === "Maths"
+    ? id.startsWith("JP") || id.startsWith("SP") || id.startsWith("phy")
+    : id.startsWith("SM") || id.startsWith("JM") || id.startsWith("math");
+  if (otherSubject) return own;
+  if (QUESTIONS[id]) return QUESTIONS[id];
+  if (subject === "Maths") return QUESTIONS["math-quad"];
+  return own;
 }
 
 function StudentLqBoard() {
@@ -621,15 +633,20 @@ function DispatchCard() {
 
 function SprintBoard() {
   const demo = useDemo();
-  const pack = packOf(demo.subject);
-  const names = demo.top2.map((id) => pack.topics.find((topic) => topic.code === id)?.name_zh ?? "課題");
-  const slots = demo.exempt
-    ? [demo.speedQueue ? "明日首題" : `${names[0] ?? "課題"} 保鮮`, "免", "免", "免", "免"]
-    : [demo.speedQueue ? "明日首題" : `${names[0] ?? "課題"} 新`, `${names[0] ?? "課題"} 新`, `${names[1] ?? names[0] ?? "課題"} 新`, "舊", "舊"];
+  const names = topicNames(demo.subject, demo.top2);
+  const slots = names.length === 0
+    ? ["空", "空", "空", "空", "空"]
+    : demo.exempt
+      ? [demo.speedQueue ? "明日首題" : `${names[0]} 保鮮`, "免", "免", "免", "免"]
+      : [demo.speedQueue ? "明日首題" : `${names[0]} 新`, `${names[0]} 新`, `${names[1] ?? names[0]} 新`, "舊", "舊"];
   return (
     <div className="mt-3">
       <p className="text-[11px] text-[#93a4b8]">
-        {demo.exempt ? "已深綠。日常 5 題收成 1 題保鮮，其餘豁免。" : `今日派發：${names.join("、")}。舊題最多 2。`}
+        {names.length === 0
+          ? "這一科的購物車是空的。"
+          : demo.exempt
+            ? "已深綠。日常 5 題收成 1 題保鮮，其餘豁免。"
+            : `今日派發：${names.join("、")}。舊題最多 2。`}
         {demo.speedQueue ? " 明早第一格是折射。" : ""}
       </p>
       <div className="mt-1 grid grid-cols-5 gap-1">
