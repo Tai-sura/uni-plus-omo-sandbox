@@ -355,6 +355,26 @@ const PAPERS: Record<string, LqPaper> = {
       "3": { label: "3 · E 運算/執行 (有 M 失 A 分)", detail: "次序寫反：先移棒再鬆手，操作分扣掉" },
     },
   },
+  "JPWM07.2": {
+    code: "JPWM07.2",
+    total: 3,
+    stem: "[LQ 手寫母題] 光線由水斜向射入空氣。繪畫折射線，並比較折射角與入射角。(3分)",
+    steps: [
+      { mark: "1M", status: "got", title: "寫出水比空氣光密，光線由光密進入光疏", self: "學生自評：🟢 介質判斷正確" },
+      { mark: "1M", status: "break", title: "折射線遠離法線，法線畫成虛線", self: "學生自評：🟡 方向畫反" },
+      { mark: "1A", status: "lost", title: "結論：折射角大於入射角", self: "連帶未寫比較" },
+    ],
+    scaffold: [
+      "Step 1（穩袋第 1 個 1M 分）：圈出「水 → 空氣」",
+      "Step 2（攻克你剛才卡關的 1M 斷點）：法線用虛線，折射線偏離法線",
+      "Step 3（衝刺最後 1A 答案分）：寫折射角大於入射角",
+    ],
+    keys: {
+      "1": { label: "1 · C 概念 (失首步 1M)", detail: "分不清光密光疏，把折射方向寫反" },
+      "2": { label: "2 · R 審題 (失條件 1M)", detail: "漏看「由水射入空氣」，當成由空氣入水" },
+      "3": { label: "3 · E 運算/執行 (有 M 失 A 分)", detail: "知道遠離法線，但漏寫折射角大於入射角" },
+    },
+  },
   "JM29.2": {
     code: "JM29.2",
     total: 3,

@@ -8,6 +8,7 @@ import { KocView } from "./KocView";
 import { LdcView } from "./LdcView";
 import { ParentView } from "./ParentView";
 import { StudentView } from "./StudentView";
+import { SocraticLab } from "./SocraticLab";
 import { useDemo, type Desk, type Role } from "@/lib/demo-context";
 
 const ROLE_COPY: { id: Role; title: string; text: string }[] = [
@@ -45,6 +46,9 @@ export function Sandbox() {
   return (
     <div className="min-h-screen">
       <ControlBar />
+      {demo.labOpen ? (
+        <SocraticLab />
+      ) : (
       <main className="mx-auto max-w-[1440px] px-3 py-3">
         <AnimatePresence>
           {demo.callout ? (
@@ -78,38 +82,18 @@ export function Sandbox() {
           </div>
         ) : demo.split ? (
           <div className="grid items-start gap-4 lg:grid-cols-[400px_minmax(0,1fr)]">
-            <div>
-              <Switcher
-                options={[
-                  ["student", "學生手機"],
-                  ["parent", "家長手機"],
-                ]}
-                value={demo.phone}
-                onChange={(phone) => demo.dispatch({ type: "patch", patch: { phone } })}
-              />
-              <PhoneFrame label={demo.phone === "parent" ? "左屏 · 家長手機" : "左屏 · 學生手機"}>
-                {demo.phone === "parent" ? <ParentView /> : <StudentView />}
-              </PhoneFrame>
-            </div>
-            <div>
-              <Switcher
-                options={[
-                  ["koc", "KOC"],
-                  ["ldc", "LDC"],
-                  ["csm", "CSM"],
-                ]}
-                value={demo.desk}
-                onChange={(desk) => demo.dispatch({ type: "patch", patch: { desk } })}
-              />
-              <DeskFrame label={deskLabel(demo.desk)}>
-                <DeskBody desk={demo.desk} />
-              </DeskFrame>
-            </div>
+            <PhoneFrame label={demo.phone === "parent" ? "左屏 · 家長手機" : "左屏 · 學生手機"}>
+              {demo.phone === "parent" ? <ParentView /> : <StudentView />}
+            </PhoneFrame>
+            <DeskFrame label={deskLabel(demo.desk)}>
+              <DeskBody desk={demo.desk} />
+            </DeskFrame>
           </div>
         ) : (
           <Single role={demo.role} />
         )}
       </main>
+      )}
       {demo.toast ? (
         <div className="fixed bottom-4 left-1/2 z-50 w-[min(560px,calc(100%-24px))] -translate-x-1/2 rounded-2xl bg-[#f4efe4] px-4 py-3 text-sm leading-6 text-[#1c1408] shadow-2xl">
           {demo.toast}
@@ -144,16 +128,4 @@ function deskLabel(desk: Desk) {
   if (desk === "ldc") return "右屏 · LDC 分流";
   if (desk === "csm") return "右屏 · CSM 指揮台";
   return "右屏 · KOC 座位圖";
-}
-
-function Switcher<T extends string>({ options, value, onChange }: { options: [T, string][]; value: T; onChange: (value: T) => void }) {
-  return (
-    <div className="mb-2 flex gap-1">
-      {options.map(([id, label]) => (
-        <button key={id} className={`rounded-full px-2.5 py-1 text-[11px] ${value === id ? "bg-[#e4c07a] text-[#1b1406]" : "bg-white/10"}`} onClick={() => onChange(id)}>
-          {label}
-        </button>
-      ))}
-    </div>
-  );
 }

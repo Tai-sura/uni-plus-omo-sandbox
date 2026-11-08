@@ -5,9 +5,9 @@ import { motion } from "framer-motion";
 import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, ResponsiveContainer } from "recharts";
 import { useDemo } from "@/lib/demo-context";
 import { CAPSULES, MA_MAP, QUESTIONS, SEATS, seatProfile } from "@/lib/mock-data";
+import { RefractionInk, RhombusInk, StudentEbookCard, StudentEbookMirror } from "./EbookKit";
 import { FOCUS_RADAR, findSubtopic, lqPaper, packOf } from "@/lib/curriculum";
 import { calcMastery, LIGHT_META, type HintLevel } from "@/lib/mastery";
-import { StudentEbookCard, StudentEbookMirror } from "./EbookKit";
 import { Card, LightPill, ScoreBar } from "./ui";
 
 export function StudentView() {
@@ -23,27 +23,45 @@ export function StudentView() {
       .filter((chapter) => chapter.score != null || demo.includeUntested)
       .map((chapter) => ({
         axis: chapter.code,
-        score: chapter.score ?? 0,
+        klass: chapter.score ?? 0,
+        mine: Math.max(18, (chapter.score ?? 0) - (focus.id === "s4" ? 28 : focus.id === "s10" ? 12 : focus.id === "anson" ? 6 : 0)),
       }));
-  }, [pack, demo.includeUntested]);
+  }, [pack, demo.includeUntested, focus.id]);
+
+  const tab = demo.studentTab;
+  const utLabel = demo.phase === "preexam" ? "距校內 UT 10 日 · 保鮮" : demo.phase === "decay" ? "距校內 UT 22 日 · 已衰減" : "距校內 UT 22 日 · 常規";
+  const peers = [
+    ["anson", "陳*軒", "主線"],
+    ["s10", "鄭*博", "微支線"],
+    ["s4", "張*澄", "急救"],
+  ] as const;
 
   return (
+    <div className="flex min-h-full flex-col">
     <div className="space-y-3">
-      <header className="flex items-start justify-between gap-2">
-        <div>
-          <p className="text-[11px] text-[#e4c07a]">聖保羅書院 · 中三 · {pack.label}</p>
-          <h2 className="text-lg font-bold">{focus.name} {focus.en}</h2>
-          <button className="mt-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px]" onClick={() => demo.dispatch({ type: "patch", patch: { emi: !demo.emi } })}>
-            {demo.emi ? "EMI 英文卷" : "中文卷"}
-          </button>
-          <p className="text-[10px] text-[#93a4b8]">SPC-S3-2026-VERIFIED</p>
+      <header>
+        <p className="text-[11px] text-[#e4c07a]">🎯 先看雷達凹角，再按黃金按鈕進入破關艙。</p>
+        <div className="mt-2 flex flex-wrap gap-1">
+          {peers.map(([id, name, kind]) => {
+            const seat = SEATS.find((item) => item.id === id)!;
+            const score = id === "anson" ? demo.heroScore : seat.mastery;
+            return (
+              <button key={id} className={`rounded-full px-2 py-1 text-[10px] ${demo.focusId === id ? "bg-[#e4c07a] text-[#1b1406]" : "bg-white/10"}`} onClick={() => demo.dispatch({ type: "patch", patch: { focusId: id } })}>
+                {name} {kind} {score}%
+              </button>
+            );
+          })}
         </div>
-        <div className="rounded-xl bg-white/5 px-2 py-1 text-right">
-          <p className="text-[10px] text-[#93a4b8]">StarCoins</p>
-          <p className="num text-lg font-bold text-[#e4c07a]">{demo.starCoins}</p>
+        <div className="mt-2 flex items-start justify-between gap-2">
+          <div>
+            <p className="text-[11px] text-[#93a4b8]">⏳ {utLabel}</p>
+            <p className="text-[11px]">🎯 預測 M_exam {pack.mExam}% · 🪙 StarCoins {demo.starCoins}</p>
+          </div>
+          <LightPill score={personal} />
         </div>
       </header>
 
+      <div className={tab === "quest" ? "space-y-3" : "hidden"}>
       <StudentEbookMirror />
       <StudentLqBoard />
 
@@ -77,7 +95,7 @@ export function StudentView() {
 
       {demo.phase === "h48" && !demo.twinCorrect ? (
         <Card id="twin" kicker="Level 3 雙胞胎" title={`${lead.subtopics[1]?.code ?? lead.code} · 同一知識點，換一個情境`}>
-          <p className="text-sm leading-6">光線由玻璃斜向射入空氣。下列哪句正確？</p>
+          <p className="text-sm leading-6">原題是水入空氣。雙胞胎改成：光線由玻璃斜向射入空氣。下列哪句正確？</p>
           <div className="mt-2 grid gap-2">
             <button className="rounded-xl bg-[#e24b3c] px-3 py-2 text-left text-sm" onClick={() => demo.dispatch({ type: "twin", ok: false })}>
               折射角小於入射角
@@ -115,6 +133,9 @@ export function StudentView() {
       ) : null}
 
       {demo.studentCard ? <DispatchCard /> : null}
+      </div>
+
+      <div className={tab === "radar" ? "space-y-3" : "hidden"}>
 
       <Card id="radar" kicker="Level 1 Chapter" title="章節雷達只作宏觀，不進購物車">
         <div className="mb-2 flex flex-wrap gap-1">
@@ -135,7 +156,8 @@ export function StudentView() {
                 <PolarGrid stroke="#2c4664" />
                 <PolarAngleAxis dataKey="axis" tick={{ fill: "#d5deea", fontSize: 11 }} />
                 <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
-                <Radar dataKey="score" stroke="#e4c07a" fill="#e4c07a" fillOpacity={0.45} />
+                <Radar dataKey="klass" stroke="#93a4b8" fill="transparent" strokeDasharray="4 3" />
+                <Radar dataKey="mine" stroke="#e4c07a" fill="#e4c07a" fillOpacity={0.45} />
               </RadarChart>
             </ResponsiveContainer>
           ) : (
@@ -151,6 +173,12 @@ export function StudentView() {
         <p className="mt-2 text-[11px] leading-5 text-[#c5d0de]">
           校內 UT 基準 M_exam（未測章不入分母）：
           <b className="num text-white"> {pack.mExam}%</b>
+        </p>
+        <button className="mt-3 w-full rounded-xl bg-[#e4c07a] py-3 text-sm font-bold text-[#1b1406]" onClick={() => demo.dispatch({ type: "patch", patch: { studentTab: "quest" } })}>
+          ⚔️ 立即進入破關艙
+        </button>
+        <p className="mt-2 text-[11px] leading-5">
+          今日補凹角：{demo.subject === "Maths" ? "JM29.2 菱形長題目，個人 44%" : "JPWM07.2 水入空氣，雷達 69%"}。完成破關可領 StarCoins，不會把 EduToken 算進學生錢包。
         </p>
       </Card>
 
@@ -202,6 +230,9 @@ export function StudentView() {
       </Card>
 
       {demo.focusId !== "anson" ? <FocusCard /> : null}
+      </div>
+
+      <div className={tab === "cart" ? "space-y-3" : "hidden"}>
       <Card id="topic-cart" kicker="Topic Cart" title={`已選 ${pack.topics.filter((topic) => demo.cart.includes(topic.code)).length}/5 · 只收 Level 2`}>
         <div className="flex flex-wrap gap-1.5">
           {pack.topics.map((topic) => {
@@ -221,8 +252,15 @@ export function StudentView() {
         </div>
         <SprintBoard />
       </Card>
+      </div>
 
+      <div className={tab === "quest" ? "space-y-3" : "hidden"}>
+      <p className="text-[11px] text-[#e4c07a]">Step 1 點題眼 → Step 2 LQ / e-Book 12 行 → Step 3 提交後解鎖膠囊</p>
       <Card id="socratic" kicker="受約束蘇格拉底 · 概念快測" title={`${lead.name_zh} · 先題眼，再 15 秒分步卡`}>
+        <button className="mb-2 rounded-lg bg-[#e4c07a] px-2 py-1.5 text-[11px] font-bold text-[#1b1406]" onClick={() => demo.dispatch({ type: "patch", patch: { labOpen: true } })}>
+          🔍 放大進入「2.3 蘇格拉底應試互動艙」
+        </button>
+        {demo.notes.length ? <p className="mb-2 text-[11px] leading-5 text-[#b6f3d2]">Fast Notes：{demo.notes.join(" ｜ ")}</p> : null}
         <p className="text-sm leading-6">{demo.emi ? topicByTop(demo.top2[0]).stemEn : topicByTop(demo.top2[0]).stem}</p>
         {demo.qStage !== "ask" ? <p className="mt-1 text-[11px] text-[#e4c07a]">題眼：{topicByTop(demo.top2[0]).eye}</p> : null}
         {demo.qStage === "ask" ? (
@@ -240,8 +278,8 @@ export function StudentView() {
             <p className="text-[11px] text-[#93a4b8]">點中真正決定方向的題眼。</p>
             <div className="grid grid-cols-3 gap-1">
               {(demo.subject === "Maths"
-                ? [["判別式", "hit"], ["實根", "miss"], ["開口", "miss"]]
-                : [["水", "hit"], ["空氣", "miss"], ["折射角", "miss"]]
+                ? [["兩個相異實根", "hit"], ["一元二次方程", "miss"], ["實數 k", "miss"]]
+                : [["水", "hit"], ["空氣", "miss"], ["入射角", "miss"]]
               ).map(([label, kind]) => (
                 <button key={label} className={`rounded-lg px-1 py-2 text-[11px] ${kind === "hit" ? "bg-[#143524]" : "bg-white/10"}`} onClick={() => demo.dispatch({ type: "eye", kind: kind as "hit" | "miss" })}>
                   {label}
@@ -277,44 +315,7 @@ export function StudentView() {
                   </p>
                 ) : null}
                 {demo.stepPage === 2 ? (
-                  <div>
-                    <div className="relative h-28 overflow-hidden rounded-lg bg-[#081018]">
-                      <Diagram opacity={1} color="#7d8da1" />
-                      <div style={{ opacity: demo.overlay / 100 }}>
-                        <Diagram opacity={1} color="#e4c07a" />
-                      </div>
-                    </div>
-                    <label className="mt-2 block text-[11px] text-[#93a4b8]">
-                      透明圖層比對 {demo.overlay}%
-                      <input
-                        className="mt-1 w-full"
-                        type="range"
-                        min={0}
-                        max={100}
-                        value={demo.overlay}
-                        onChange={(event) => demo.dispatch({ type: "patch", patch: { overlay: Number(event.target.value) } })}
-                      />
-                    </label>
-                    <div className="mt-1 space-y-1 text-[11px]">
-                      {["法線沒有畫成虛線", "箭頭方向畫反"].map((label, index) => (
-                        <label key={label} className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={demo.deduct[index]}
-                            onChange={() => {
-                              const deduct: [boolean, boolean] = [...demo.deduct];
-                              deduct[index] = !deduct[index];
-                              demo.dispatch({ type: "patch", patch: { deduct } });
-                            }}
-                          />
-                          必扣分：{label}
-                        </label>
-                      ))}
-                    </div>
-                    <button className="mt-2 rounded-lg bg-white/10 px-2 py-1 text-[11px]" onClick={() => demo.dispatch({ type: "patch", patch: { photo: true, toast: "已模擬拍照。原圖留在本地，只上傳比對結果。" } })}>
-                      {demo.photo ? "已拍攝作圖" : "可選拍照"}
-                    </button>
-                  </div>
+                  demo.commute ? <p className="text-sm">通勤模式已收起紙筆作圖。改做下面的 Fast Notes。</p> : <DrawHotspot />
                 ) : null}
                 <p className="mt-2 text-[10px] text-[#e4c07a]">林知行團隊獨創研發</p>
                 <button className="mt-2 w-full rounded-xl bg-[#1d4e89] py-2 text-sm font-bold" onClick={() => demo.dispatch({ type: "submit-steps" })}>
@@ -324,10 +325,17 @@ export function StudentView() {
             ) : null}
             {demo.capsules ? (
               <div className="space-y-1">
-                {CAPSULES.map((item) => (
-                  <details key={item.q} className="rounded-lg bg-black/25 p-2 text-sm">
-                    <summary className="cursor-pointer">💊 {item.q}</summary>
-                    <p className="mt-1 text-[12px] leading-5 text-[#d5deea]">{item.a}</p>
+                {(demo.subject === "Maths"
+                  ? [
+                      ["點解 Δ 要大於 0？", "相異實根是兩個不同實根，所以寫 Δ > 0，不是 ≥ 0。"],
+                      ["MC 可以怎樣秒殺？", "代入 k=0 看判別式符號，先排除再算範圍。"],
+                      ["菱形 LQ 要寫什麼？", "必寫 property of rhombus。Q5 的 ∠DFC = ∠DFE，答案 34.5°。"],
+                    ]
+                  : CAPSULES.map((item) => [item.q, item.a])
+                ).map(([q, a]) => (
+                  <details key={q} className="rounded-lg bg-black/25 p-2 text-sm">
+                    <summary className="cursor-pointer">💊 {q}</summary>
+                    <p className="mt-1 text-[12px] leading-5 text-[#d5deea]">{a}</p>
                   </details>
                 ))}
                 <button className="text-[11px] text-[#e4c07a]" onClick={() => demo.dispatch({ type: "note" })}>
@@ -343,19 +351,22 @@ export function StudentView() {
           </div>
         )}
       </Card>
+      </div>
 
-      <Card id="flash" kicker="Fast Notes 閃卡" title="挖空三選一">
+      <div className={tab === "notes" ? "space-y-3" : "hidden"}>
+      <Card id="flash" kicker="Fast Notes 閃卡" title={demo.subject === "Maths" ? "SM02.2 挖空" : "JPWM07.2 挖空"}>
         <div className={`rounded-xl p-3 transition ${demo.flash === "flipped" ? "bg-[#143524]" : "bg-black/30"}`}>
           <p className="text-sm leading-6">
-            光由光密介質進入光疏介質時，折射角會 {demo.flash === "flipped" ? "大於" : "____"} 入射角。
+            {demo.subject === "Maths"
+              ? <>兩個相異實根要寫 Δ {demo.flash === "flipped" ? ">" : "____"} 0。</>
+              : <>光線由水斜向射入空氣時，折射角會 {demo.flash === "flipped" ? "大於" : "____"} 入射角。</>}
           </p>
         </div>
         <div className="mt-2 grid grid-cols-3 gap-1">
-          {[
-            ["大於", true],
-            ["小於", false],
-            ["等於", false],
-          ].map(([label, ok]) => (
+          {(demo.subject === "Maths"
+            ? [[" > ", true], [" ≥ ", false], [" < ", false]]
+            : [["大於", true], ["小於", false], ["等於", false]]
+          ).map(([label, ok]) => (
             <button
               key={String(label)}
               disabled={demo.flash === "locked"}
@@ -440,6 +451,22 @@ export function StudentView() {
           <p className="mt-2 text-[11px] text-[#93a4b8]">物理科只顯示 C / R / E，這裡不出現 MA1–MA6。</p>
         )}
       </Card>
+      </div>
+      <nav className="sticky bottom-0 z-20 mt-3 grid grid-cols-4 gap-1 border-t border-white/10 bg-[#07111c]/95 py-2">
+        {(
+          [
+            ["radar", "🕸️ 雷達"],
+            ["quest", "⚔️ 破關"],
+            ["cart", "🛒 選課"],
+            ["notes", `⚡ 閃卡${demo.notes.length ? ` ${demo.notes.length}` : ""}`],
+          ] as const
+        ).map(([id, label]) => (
+          <button key={id} className={`rounded-lg px-1 py-2 text-[10px] font-bold ${tab === id ? "bg-[#e4c07a] text-[#1b1406]" : "bg-white/10"}`} onClick={() => demo.dispatch({ type: "patch", patch: { studentTab: id } })}>
+            {label}
+          </button>
+        ))}
+      </nav>
+    </div>
     </div>
   );
 }
@@ -634,13 +661,26 @@ function Burst({ token }: { token: number }) {
   );
 }
 
-function Diagram({ color }: { opacity: number; color: string }) {
+function DrawHotspot() {
+  const demo = useDemo();
+  const [spot, setSpot] = useState(false);
+  const maths = demo.subject === "Maths";
   return (
-    <svg viewBox="0 0 200 110" className="absolute inset-0 h-full w-full">
-      <line x1="100" y1="8" x2="100" y2="102" stroke={color} strokeDasharray="3 3" />
-      <line x1="16" y1="56" x2="184" y2="56" stroke={color} />
-      <line x1="28" y1="96" x2="100" y2="56" stroke={color} strokeWidth="2" />
-      <line x1="100" y1="56" x2="168" y2="20" stroke={color} strokeWidth="2" />
-    </svg>
+    <div>
+      {maths
+        ? <RhombusInk runId={0} pen="both" frame={spot ? 12 : 8} hotspot={!spot} onHotspot={() => setSpot(true)} />
+        : <RefractionInk hotspot={!spot} onHotspot={() => setSpot(true)} />}
+      {spot ? (
+        <>
+          <label className="mt-2 block text-[11px] text-[#93a4b8]">
+            透明圖層比對 {demo.overlay}%
+            <input className="mt-1 w-full" type="range" min={0} max={100} value={demo.overlay} onChange={(event) => demo.dispatch({ type: "patch", patch: { overlay: Number(event.target.value) } })} />
+          </label>
+          <p className="text-[11px] text-[#e4c07a]" style={{ opacity: Math.max(0.35, demo.overlay / 100) }}>
+            {maths ? "標準層：F 點 ∠DFC = ∠DFE，34.5°" : "標準層：法線虛線，折射線遠離法線"}
+          </p>
+        </>
+      ) : <p className="text-[11px] text-[#93a4b8]">先點圖上紅色熱區，才解鎖標準圖層。</p>}
+    </div>
   );
 }

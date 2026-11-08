@@ -158,6 +158,11 @@ interface State {
   ebookPen: "P" | "H" | "both";
   ebookTab: EbookTab;
   kocEbook: boolean;
+  labOpen: boolean;
+  labTrace: string | null;
+  commute: boolean;
+  studentTab: "radar" | "quest" | "cart" | "notes";
+  phonePulse: number;
 }
 
 const initial: State = {
@@ -274,6 +279,11 @@ const initial: State = {
   ebookPen: "both",
   ebookTab: "rhombus",
   kocEbook: false,
+  labOpen: false,
+  labTrace: null,
+  commute: false,
+  studentTab: "radar",
+  phonePulse: 0,
 };
 
 type Action =
@@ -428,9 +438,12 @@ function reducer(state: State, action: Action): State {
       return { ...state, toast: action.text };
     case "act": {
       const spec = ACTS[action.act];
+      const studentTab = action.act === 1 ? "radar" : action.act === 2 || action.act === 3 ? "quest" : state.studentTab;
       return {
         ...state,
         ...spec.patch,
+        studentTab,
+        phonePulse: state.phonePulse + 1,
         act: action.act,
         callout: spec,
         entered: true,
@@ -446,6 +459,8 @@ function reducer(state: State, action: Action): State {
         freshness,
         twinCorrect: action.phase === "h48" ? false : state.twinCorrect,
         highlight: action.phase === "h48" ? "twin" : action.phase === "preexam" ? "freshness" : "hero-score",
+        studentTab: action.phase === "h48" || action.phase === "preexam" ? "quest" : state.studentTab,
+        phonePulse: state.phonePulse + 1,
       };
     }
     case "cart": {
@@ -496,9 +511,11 @@ function reducer(state: State, action: Action): State {
         qStage: "done",
         toast: "已解鎖 3 顆戰術發問膠囊。初練封頂 84% 淺綠，等待 48 小時驗證。",
       };
-    case "note":
-      if (state.notes.includes("光的折射 · 離法線")) return state;
-      return { ...state, notes: [...state.notes, "光的折射 · 離法線"], toast: "1 秒已存入 Fast Notes。" };
+    case "note": {
+      const note = state.subject === "Maths" ? "SM02.2 · 相異實根要寫 Δ > 0" : "JPWM07.2 · 水入空氣 · 遠離法線";
+      if (state.notes.includes(note)) return state;
+      return { ...state, notes: [...state.notes, note], capsules: true, toast: "1 秒已存入 Tab 4 閃卡庫。" };
+    }
     case "twin":
       if (!action.ok) {
         const twinWrong = state.twinWrong + 1;
@@ -607,7 +624,7 @@ function reducer(state: State, action: Action): State {
         promoted: true,
         royalty: Math.round((state.royalty + 0.5) * 10) / 10,
         eduToken: Math.round((state.eduToken + 0.5) * 10) / 10,
-        toast: "Pass。已蓋上雙師冠名印章，督導版稅 +0.5 EduToken，Jason 晉升 KOC Leader。",
+        toast: "Pass。已蓋上雙師冠名印章，督導版稅 +0.5 EduToken，Oscar 晉升 KOC Leader。",
       };
     }
     case "mask-accept": {
@@ -658,7 +675,7 @@ function reducer(state: State, action: Action): State {
         desk: role === "ldc" ? "ldc" : role === "csm" ? "csm" : "koc",
         duo: false,
         split: false,
-        barCollapsed: role === "student" || role === "parent",
+        barCollapsed: false,
       };
     }
     case "focus":
@@ -666,6 +683,8 @@ function reducer(state: State, action: Action): State {
         ...state,
         focusId: action.id,
         phone: "student",
+        studentTab: "radar",
+        phonePulse: state.phonePulse + 1,
         split: true,
         instructionOpen: action.id === "anson" ? true : state.instructionOpen,
         highlight: action.id === "anson" ? "seat-anson" : "focus-profile",
@@ -717,7 +736,7 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         tickets: [...state.tickets, { id: `t${state.tickets.length + 1}`, title: "新觸發 · 攻堅支援 [重點]", tier: "priority", owner }],
-        toast: owner === "chloe" ? "Jason 已滿 5 單。這張重點工單直接飛到 Chloe。" : "新工單已派給 Jason。",
+        toast: owner === "chloe" ? "Oscar 已滿 5 單。這張重點工單直接飛到 Chloe。" : "新工單已派給 Oscar。",
       };
     }
     case "overflow":
@@ -729,7 +748,7 @@ function reducer(state: State, action: Action): State {
           if (ticket.tier === "convert") return { ...ticket, owner: "csm" as const };
           return ticket;
         }),
-        toast: "重點工單已飛到 Chloe。常規工單仍留在 Jason。",
+        toast: "重點工單已飛到 Chloe。常規工單仍留在 Oscar。",
       };
     case "ice": {
       const next = Math.min(state.iceStep + 1, 3);
@@ -839,8 +858,10 @@ function reducer(state: State, action: Action): State {
         studentCard: action.card,
         split: true,
         phone: "student",
+        studentTab: "quest",
+        phonePulse: state.phonePulse + 1,
         highlight: "student-card",
-        toast: `左屏已收到：${action.card.title}`,
+        toast: `🔔 已切換至破關艙，並載入：${action.card.title}`,
       };
     case "koc-alert":
       return {

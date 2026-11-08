@@ -305,8 +305,8 @@ export const HERO = {
   cohort: "SPC-S3-2026-VERIFIED",
   parentPin: "8821",
   ldc: "林知行",
-  koc: "Jason 陳朗",
-  kocLeaderTrack: "Jason",
+  koc: "Oscar 黃朗",
+  kocLeaderTrack: "Oscar",
   csm: "蘇芷澄",
   backupKoc: "Chloe 李晴",
   predicted: 80,
@@ -397,7 +397,7 @@ export const TLA = [
 ];
 
 export const PAYOUT_OK = [
-  { name: "Jason 陳朗", pct: 0.3 },
+  { name: "Oscar 黃朗", pct: 0.3 },
   { name: "林知行", pct: 0.2 },
   { name: "跨科轉化池", pct: 0.2 },
 ];

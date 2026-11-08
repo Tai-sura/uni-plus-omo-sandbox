@@ -69,7 +69,7 @@ export function EbookConsole() {
           📥 Export PDF with ink
         </button>
       </div>
-      {demo.kocEbook ? <p className="mt-1 text-[11px] text-[#b6f3d2]">KOC 助教 iPad 已載入 JM29c Q5 (0/12 步 + 定理理由標籤)</p> : null}
+      {demo.kocEbook ? <p className="mt-1 text-[11px] text-[#b6f3d2]">KOC 助教 iPad 跟着學生已揭 {demo.ebookShown}/{JM29_LINES.length} 步，不會提前看到未揭行。</p> : null}
       {demo.ebookOpen ? <EbookStage audience="ldc" /> : null}
     </div>
   );
@@ -90,7 +90,9 @@ export function EbookStage({ audience }: { audience: "ldc" | "student" }) {
         {audience === "student" ? "跟住右屏 · " : ""}JM29c · Q5 Rhombus · 3 分 LQ
       </p>
       {audience === "student" ? <p className="text-[10px] text-[#8a5a12]">右屏揭到第幾步、畫到哪一筆，這部手機會同時顯示。</p> : null}
-      <p className="mt-1 text-[12px] leading-5">In the figure, CDEF is a rhombus. AFC and BCD are straight lines. If AB = AC and ∠BAC = 42°, find ∠DFE.</p>
+      <p className="mt-1 text-[12px] leading-5">
+        In the figure, <span className="rounded border border-dashed border-[#1f8a4c] px-1">CDEF is a rhombus</span>. AFC and BCD are straight lines. If <span className="rounded border border-dashed border-[#2f6fed] px-1">AB = AC</span> and <span className="rounded border border-dashed border-[#d4537e] px-1">∠BAC = 42°</span>, find ∠DFE.
+      </p>
       {demo.ebookTab !== "rhombus" ? (
         <p className="mt-1 text-[11px] text-[#8a5a12]">這個分頁是 e-Book 難度層。逐行揭曉仍鎖定 Rhombus Q5，方便對照 Basic / Standard / Level 2。</p>
       ) : null}
@@ -160,9 +162,9 @@ export function EbookRevealer({
               className={`flex w-full items-start justify-between gap-2 rounded px-1 py-1 text-left text-[12px] leading-5 ${marked ? "bg-[#e24b3c]/25" : "bg-white/60"}`}
               onClick={() => onBreak?.(lineNo)}
             >
-              <span className="whitespace-pre-wrap">
+              <span className={`whitespace-pre-wrap ${line.expr.includes("34.5") ? "underline decoration-[#243044]" : ""} ${line.reason === "property of rhombus" ? "underline decoration-[#1f8a4c]" : ""}`}>
                 {lineNo}. {line.expr}
-                {line.reason ? <span className="ml-1 inline-block rounded bg-[#d5d5d5] px-1.5 py-0.5 text-[10px] font-semibold text-[#444]">{line.reason}</span> : null}
+                {line.reason ? <span className="ml-1 text-[11px] italic text-[#1d4e89]">{line.reason}</span> : null}
                 {line.mark ? <span className="ml-1 text-[10px] font-bold text-[#8a5a12]">{line.mark}</span> : null}
               </span>
               <span className="max-w-[46%] text-right text-[10px] text-[#5c5346]">{line.note}</span>
@@ -219,68 +221,104 @@ export function StudentEbookCard() {
   );
 }
 
-export function RhombusInk({ runId, pen, frame }: { runId: number; pen: "P" | "H" | "both"; frame?: number }) {
+export function RhombusInk({
+  runId,
+  pen,
+  frame,
+  hotspot = false,
+  onHotspot,
+}: {
+  runId: number;
+  pen: "P" | "H" | "both";
+  frame?: number;
+  hotspot?: boolean;
+  onHotspot?: () => void;
+}) {
   const [tick, setTick] = useState(frame ?? 0);
   useEffect(() => {
-    if (frame != null) {
-      setTick(frame);
-      return;
+    if (runId) {
+      setTick(0);
+      let step = 0;
+      const timer = window.setInterval(() => {
+        step += 1;
+        setTick(step);
+        if (step >= JM29_LINES.length) window.clearInterval(timer);
+      }, 900);
+      return () => window.clearInterval(timer);
     }
-    if (!runId) return;
-    setTick(0);
-    let step = 0;
-    const timer = window.setInterval(() => {
-      step += 1;
-      setTick(step);
-      if (step >= JM29_LINES.length) window.clearInterval(timer);
-    }, 900);
-    return () => window.clearInterval(timer);
+    setTick(frame ?? 0);
   }, [runId, frame]);
 
   const showRed = pen !== "H";
   const showHigh = pen !== "P";
   return (
     <div className="mt-2 rounded-xl bg-white p-2 text-[#21180f]">
-      <svg viewBox="0 0 250 190" className="mx-auto h-48 w-full max-w-[280px]">
-        {showHigh && tick >= 8 ? <polygon points="132,158 210,158 194,92 116,92" fill="#ffe14a" opacity="0.75" /> : null}
-        {showHigh && tick >= 3 && tick < 8 ? <polygon points="100,16 24,158 132,158" fill="#c9e4ff" opacity="0.55" /> : null}
-        <polygon points="100,16 24,158 132,158" fill="none" stroke="#243044" strokeWidth="1.8" />
-        <line x1="132" y1="158" x2="210" y2="158" stroke="#243044" strokeWidth="1.8" />
-        <polyline points="132,158 116,92 194,92 210,158" fill="none" stroke="#243044" strokeWidth="1.8" />
-        <line x1="116" y1="92" x2="210" y2="158" stroke="#243044" strokeWidth="1.4" />
-        <path d="M100,34 L92,30 L96,40" fill="none" stroke="#243044" strokeWidth="1.2" />
+      <svg viewBox="0 0 260 200" className="mx-auto h-48 w-full max-w-[320px]">
+        {showHigh && tick >= 8 ? <polygon points="152,172 134.1,94 214.1,94 232,172" fill="#ffe14a" opacity="0.75" /> : null}
+        {showHigh && tick >= 3 && tick < 8 ? <polygon points="118,24 32,172 152,172" fill="#c9e4ff" opacity="0.55" /> : null}
+        <polygon points="118,24 32,172 152,172" fill="none" stroke="#243044" strokeWidth="1.8" />
+        <line x1="152" y1="172" x2="232" y2="172" stroke="#243044" strokeWidth="1.8" />
+        <polyline points="152,172 134.1,94 214.1,94 232,172" fill="none" stroke="#243044" strokeWidth="1.8" />
+        <line x1="134.1" y1="94" x2="232" y2="172" stroke="#243044" strokeWidth="1.4" />
+        <path d="M118,42 L108,38 L112,50" fill="none" stroke="#243044" strokeWidth="1.2" />
         {showRed && tick >= 2 ? <g stroke="#d10f0f" strokeWidth="1.6">
-          <line x1="62" y1="78" x2="70" y2="86" />
-          <line x1="66" y1="74" x2="74" y2="82" />
-          <line x1="112" y1="78" x2="120" y2="70" />
-          <line x1="116" y1="82" x2="124" y2="74" />
+          <line x1="70" y1="92" x2="78" y2="100" />
+          <line x1="74" y1="88" x2="82" y2="96" />
+          <line x1="128" y1="92" x2="136" y2="84" />
+          <line x1="132" y1="96" x2="140" y2="88" />
         </g> : null}
-        {showRed && tick >= 7 ? <text x="136" y="150" fontSize="11" fill="#d10f0f">69°</text> : null}
-        {showRed && tick >= 8 ? <path d="M124,104 L132,108 L128,116" fill="none" stroke="#d10f0f" strokeWidth="1.5" /> : null}
+        {showRed && tick >= 7 ? <text x="156" y="164" fontSize="11" fill="#d10f0f">69°</text> : null}
+        {showRed && tick >= 8 ? <path d="M142,108 L150,112 L146,122" fill="none" stroke="#d10f0f" strokeWidth="1.5" /> : null}
         {showRed && tick >= 9 ? <g stroke="#d10f0f" strokeWidth="1.4">
-          <line x1="150" y1="88" x2="162" y2="88" />
-          <line x1="70" y1="154" x2="82" y2="154" />
+          <line x1="166" y1="90" x2="180" y2="90" />
+          <line x1="80" y1="168" x2="94" y2="168" />
         </g> : null}
-        {showRed && tick >= 12 ? <text x="128" y="84" fontSize="11" fill="#d10f0f">34.5°</text> : null}
-        <text x="94" y="12" fontSize="11" fill="#243044">A</text>
-        <text x="10" y="168" fontSize="11" fill="#243044">B</text>
-        <text x="124" y="176" fontSize="11" fill="#243044">C</text>
-        <text x="206" y="176" fontSize="11" fill="#243044">D</text>
-        <text x="104" y="88" fontSize="11" fill="#243044">F</text>
-        <text x="196" y="88" fontSize="11" fill="#243044">E</text>
-        <text x="78" y="36" fontSize="11" fill={showRed && tick >= 5 ? "#d10f0f" : "#243044"}>42°</text>
+        {showRed && tick >= 12 ? <text x="146" y="86" fontSize="11" fill="#d10f0f">34.5°</text> : null}
+        <text x="110" y="16" fontSize="12" fill="#243044">A</text>
+        <text x="16" y="186" fontSize="12" fill="#243044">B</text>
+        <text x="144" y="190" fontSize="12" fill="#243044">C</text>
+        <text x="226" y="190" fontSize="12" fill="#243044">D</text>
+        <text x="116" y="90" fontSize="12" fill="#243044">F</text>
+        <text x="216" y="88" fontSize="12" fill="#243044">E</text>
+        <text x="96" y="48" fontSize="12" fill={showRed && tick >= 5 ? "#d10f0f" : "#243044"}>42°</text>
+        {hotspot ? (
+          <circle cx="134.1" cy="94" r="16" fill="rgba(226,75,60,0.18)" stroke="#e24b3c" strokeDasharray="3 2" className="cursor-pointer" onClick={onHotspot} />
+        ) : null}
       </svg>
       <p className="text-center text-[10px] leading-4">
         {tick >= 12
           ? "∠DFE = 34.5°"
           : tick >= 8
-            ? "∠DFC = ∠DFE  [property of rhombus]"
+            ? "∠DFC = ∠DFE  property of rhombus"
             : tick >= 7
-              ? "∠ACB = 69°  [∠ sum of △]"
+              ? "∠ACB = 69°"
               : tick >= 3
                 ? "∠ABC = ∠ACB  [base ∠s, isos. △]"
-                : "Q5 · CDEF rhombus · 筆跡回放"}
+                : "Q5 · CDEF rhombus · S3 JM29 Quadrilaterals (C)"}
       </p>
+      {hotspot ? <p className="text-center text-[10px] text-[#8a5a12]">熱區在 F。點紅色虛線圈，確認 ∠DFE 已畫。</p> : null}
+    </div>
+  );
+}
+
+export function RefractionInk({ hotspot = false, onHotspot }: { hotspot?: boolean; onHotspot?: () => void }) {
+  return (
+    <div className="mt-2 rounded-xl bg-white p-2 text-[#21180f]">
+      <svg viewBox="0 0 220 140" className="mx-auto h-36 w-full max-w-[280px]">
+        <rect x="0" y="70" width="220" height="70" fill="#d7ecff" />
+        <text x="8" y="18" fontSize="11" fill="#243044">空氣</text>
+        <text x="8" y="132" fontSize="11" fill="#1d4e89">水</text>
+        <line x1="110" y1="8" x2="110" y2="132" stroke="#243044" strokeDasharray="4 3" />
+        <line x1="8" y1="70" x2="212" y2="70" stroke="#243044" />
+        <line x1="48" y1="126" x2="110" y2="70" stroke="#243044" strokeWidth="2" />
+        <line x1="110" y1="70" x2="176" y2="16" stroke="#d10f0f" strokeWidth="2.4" />
+        <path d="M168,28 L176,16 L164,20" fill="#d10f0f" />
+        {hotspot ? (
+          <circle cx="150" cy="38" r="16" fill="rgba(226,75,60,0.18)" stroke="#e24b3c" strokeDasharray="3 2" className="cursor-pointer" onClick={onHotspot} />
+        ) : null}
+      </svg>
+      <p className="text-center text-[10px]">水 → 空氣 · 折射線遠離法線</p>
+      {hotspot ? <p className="text-center text-[10px] text-[#8a5a12]">熱區在空氣一側的折射線。點紅色虛線圈。</p> : null}
     </div>
   );
 }

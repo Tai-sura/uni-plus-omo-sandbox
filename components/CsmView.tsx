@@ -24,12 +24,13 @@ export function CsmView() {
       <header>
         <p className="text-[11px] text-[#e4c07a]">CSM · {HERO.csm}</p>
         <h2 className="text-xl font-bold">防雪崩、先知名單、獎金安全閥</h2>
+        <p className="text-[11px] text-[#c5d0de]">🎯 第一步：看 Oscar 是否已滿 5 單，再把溢出工單交給 Chloe。</p>
       </header>
 
       <Card id="care" kicker="Care Alerts" title="重點工單溢出路由">
         <div className="grid gap-3 md:grid-cols-[1.2fr_0.8fr]">
           <div>
-            <p className="text-sm">Jason 本週已滿 5/5。新的「攻堅支援 [重點]」不再堆給他。</p>
+            <p className="text-sm">Oscar 本週已滿 5/5。新的「攻堅支援 [重點]」不再堆給他。</p>
             <div className="mt-2 space-y-1 text-sm">
               <p className="rounded-lg bg-[#3a1c22] px-2 py-2">① 攻堅支援 [重點] · 陳*軒 · 折射紅點後 48h</p>
               <p className="rounded-lg bg-white/5 px-2 py-2">② 暖心作息 [重點] · 何*言 · 仍留在原 KOC</p>
@@ -38,7 +39,7 @@ export function CsmView() {
             <div className="mt-2 grid gap-2 md:grid-cols-3">
               {(["jason", "chloe", "csm"] as const).map((owner) => (
                 <div key={owner} className="rounded-lg bg-black/20 p-2 text-[11px]">
-                  <p className="text-[#e4c07a]">{owner === "jason" ? "Jason" : owner === "chloe" ? "Chloe" : "CSM"}</p>
+                  <p className="text-[#e4c07a]">{owner === "jason" ? "Oscar" : owner === "chloe" ? "Chloe" : "CSM"}</p>
                   {demo.tickets.filter((ticket) => ticket.owner === owner).map((ticket) => (
                     <p key={ticket.id} className="mt-1">{ticket.title}</p>
                   ))}

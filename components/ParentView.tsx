@@ -10,7 +10,7 @@ import { Card, LightPill, ScoreBar } from "./ui";
 
 const VOICE = {
   ldc: "家長您好，我是林知行。這一課全班先抓住光密走向光疏會遠離法線。陳軒唔使加做整張卷，只要把折射角和入射角的大小關係說清楚。",
-  koc: "陳軒家長，我是 Jason。他今天把水進空氣聽成靠近法線。我已經用十五秒分步卡跟他拆過。你不用陪讀，只要聽完這三句。",
+  koc: "陳軒家長，我是 Oscar。他今天把水進空氣聽成靠近法線。我已經用十五秒分步卡跟他拆過。你不用陪讀，只要聽完這三句。",
 };
 
 export function ParentView() {
@@ -88,7 +88,7 @@ export function ParentView() {
   return (
     <div className="space-y-3">
       <header>
-        <p className="text-[11px] text-[#e4c07a]">雙週戰報 · 純中文課題名</p>
+        <p className="text-[11px] text-[#e4c07a]">🎯 第一步：播 15 秒語音，再看菱形筆跡快照。PIN 8821。</p>
         <h2 className="text-xl font-bold">{focus?.name ?? "陳*軒"} · {lead.name_zh}</h2>
         <p className="text-[11px] text-[#93a4b8]">這裡只有 StarCoins {demo.coins.anson ?? demo.starCoins}。EduToken 不會出現在家長手機。</p>
         <p className="text-[11px] text-[#93a4b8]">{HERO.school} · {HERO.form}</p>
@@ -130,7 +130,7 @@ export function ParentView() {
       <Card id="voice" kicker="1+1 雙師" title="名師導航 + 個人點評">
         <div className="grid gap-2">
           <VoiceButton label="林知行 · 20 秒班級導航" active={demo.voice === "ldc"} onClick={() => play(demo, "ldc")} />
-          <VoiceButton label="Jason · 15 秒個人點評" active={demo.voice === "koc"} onClick={() => play(demo, "koc")} />
+          <VoiceButton label="Oscar · 15 秒個人點評" active={demo.voice === "koc"} onClick={() => play(demo, "koc")} />
         </div>
         <div className="mt-3 space-y-2">
           {QUOTES.map((quote, index) => (

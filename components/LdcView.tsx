@@ -45,6 +45,8 @@ export function LdcView() {
         </div>
         <p className="text-xs text-[#93a4b8]">督導版稅 {demo.royalty.toFixed(1)} EduToken</p>
       </header>
+      <p className="text-[11px] text-[#e4c07a]">🎯 第一步：展開 Top 2，再用 1 / 2 / 3 熱鍵批改。派題時左屏手機會亮一下。</p>
+      <p className="text-xs font-bold text-[#e4c07a]">STEP ① 課前 10 分鐘 · Top 2 冒煙與三軌派題</p>
 
       <Card dense kicker="LDC 全局課綱錨點" title="本堂激活課題與校內基準">
         <p className="text-sm leading-5">
@@ -53,6 +55,10 @@ export function LdcView() {
         <p className="text-[11px] text-[#93a4b8]">當前批改考點：{examPoint.code} {examPoint.name}（{examPoint.score}%）</p>
         <p className="mt-1 text-sm">全班校內 UT 預測基準分 M_exam = {pack.mExam}%（已排除 ⚪ 未測課題）</p>
         <p className="mt-1 inline-block rounded-full bg-[#1d4e89] px-2 py-1 text-[11px]">⚖️ 測考真實權重：📝 LQ 長題目步驟分 (70%) + ⚡ MC 概念快測 (30%)</p>
+        <button className="mt-2 rounded-lg bg-[#e4c07a] px-2 py-1.5 text-[11px] font-bold text-[#1b1406]" onClick={() => demo.dispatch({ type: "patch", patch: { labOpen: true } })}>
+          🔍 放大進入「2.3 蘇格拉底應試互動艙」
+        </button>
+        {demo.labTrace ? <p className="mt-1 text-[11px] leading-5 text-[#b6f3d2]">2.3 艙剛寫回：{demo.labTrace}</p> : null}
         {demo.subject === "Maths" ? <p className="mt-1 text-[11px] text-[#e4c07a]">一鍵切換演示課題：SM02 代數 LQ，或 JM29 四邊形幾何 e-Book。</p> : null}
         {demo.subject === "Maths" ? <div className="mt-2"><EbookConsole /></div> : null}
       </Card>
@@ -149,6 +155,7 @@ export function LdcView() {
       </Card>
 
       <div className="grid gap-2 xl:grid-cols-2">
+        <p className="text-xs font-bold text-[#e4c07a]">STEP ② 課中 60 秒 · LQ 步驟與 e-Book 熱鍵</p>
         <Card dense id="hotkey" kicker="60 秒複合熱鍵 · 📝 LQ 長題目步驟拆解 (1M/1A)" title="1 · C　2 · R　3 · E">
           <p className="text-[11px] leading-5 text-[#93a4b8]">
             當前批改學生：{focus.name} ｜ 考點：{examPoint.code} {examPoint.name} ({examPoint.score}%) ｜ 學生自評：🟡 識一半
@@ -203,6 +210,7 @@ export function LdcView() {
           ) : null}
         </Card>
 
+        <p className="text-xs font-bold text-[#e4c07a]">STEP ③ 課後 15 秒 · 戰報提詞與五行審核</p>
         <Card dense id="tele" kicker="🎙️ AI 雙週戰報語音提詞器 (15s 個人化講稿)" title={focus.name}>
           <p className="text-[11px] text-[#e4c07a]">已自動帶入：純中文課題名 + LQ 步驟 + C/R/E</p>
           <div className="relative mt-1 rounded-xl bg-black/40 p-2">
@@ -225,7 +233,7 @@ export function LdcView() {
       </div>
 
       <Card dense id="audit" kicker="10 秒五行審核" title="金 · 木 · 火">
-        <p className="mb-2 text-[11px] text-[#93a4b8]">審核對象：KOC 助教 陳*希（15s 分步卡共創品質）</p>
+        <p className="mb-2 text-[11px] text-[#93a4b8]">審核對象：助教 Adrian 何*希（15s 分步卡共創品質）</p>
         <div className="grid gap-3 md:grid-cols-3">
           <Audit label="⚔️ 金 · 概念準確" value={demo.audit.metal} onChange={(value) => demo.dispatch({ type: "audit", key: "metal", value })} />
           <Audit label="🌲 木 · Flow 順暢" value={demo.audit.wood} onChange={(value) => demo.dispatch({ type: "audit", key: "wood", value })} />

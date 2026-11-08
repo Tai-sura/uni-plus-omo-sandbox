@@ -34,6 +34,7 @@ export function KocView() {
         <div>
           <p className="text-[11px] text-[#e4c07a]">KOC 伴學 · {HERO.koc}</p>
           <h2 className="text-xl font-bold">座位圖、母卷與晉升</h2>
+        <p className="text-[11px] text-[#c5d0de]">🎯 第一步：點紅點學生，再看母卷遮罩是否只顯示學生已揭的行。</p>
         </div>
         <div className="text-right text-xs">
           <p>EduToken <span className="num text-[#e4c07a]">{demo.eduToken}</span></p>
@@ -80,10 +81,10 @@ export function KocView() {
               {demo.subject === "Maths" && (demo.kocEbook || demo.ebookOpen || isEbookPoint(demo.examCode)) ? (
                 <>
                   <EbookLink />
-                  <p className="mt-2 font-bold">JM29c · Q5 Rhombus · 學生手機 {demo.ebookShown}/{JM29_LINES.length} 步</p>
-                  <p>核對點：1M ∠ACB = 69° · 1M ∠DFC = ∠DFE · 1A ∠DFE = 34.5°</p>
+                  <p className="mt-2 font-bold">JM29c · Q5 Rhombus · 跟着學生已揭 {demo.ebookShown}/{JM29_LINES.length} 步</p>
+                  <p>未揭的行不會出現在這張遮罩。</p>
                   <div className="mt-1 space-y-0.5">
-                    {JM29_LINES.slice(0, Math.max(demo.ebookShown, demo.kocEbook ? JM29_LINES.length : 0)).map((line, index) => {
+                    {JM29_LINES.slice(0, demo.ebookShown).map((line, index) => {
                       const lineNo = index + 1;
                       const marked = demo.ebookBreak === lineNo || ebookHits(demo.hotkeys).includes(lineNo);
                       return (
@@ -316,7 +317,7 @@ function StudentPageOnDesk({ seatName }: { seatName: string }) {
 function TicketBoard() {
   const demo = useDemo();
   const columns = [
-    ["jason", "Jason"],
+    ["jason", "Oscar"],
     ["chloe", "Chloe"],
     ["csm", "CSM"],
   ] as const;
