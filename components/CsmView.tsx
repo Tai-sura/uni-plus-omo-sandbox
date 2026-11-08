@@ -6,16 +6,19 @@ import { Card } from "./ui";
 
 const SCRIPT = `陳*軒家長您好。光的折射這兩週的判斷已穩定很多，本週會繼續用 15 秒分步卡鞏固「遠離法線」，暫時不用加卷。校內分數若與預測有差距，我們會當成臨場調校，而不是退步。您只要在戰報按 1 秒確認即可。`;
 
+const SCRIPT_MATHS = `陳*軒家長您好。一元二次方程這兩週的判斷已穩定很多，本週會繼續用 15 秒分步卡鞏固「相異實根要寫 Δ > 0」和展開變號，暫時不用加卷。校內分數若與預測有差距，我們會當成臨場調校，而不是退步。您只要在戰報按 1 秒確認即可。`;
+
 export function CsmView() {
   const demo = useDemo();
   const gap = demo.studentUt == null ? 0 : demo.predictedLive - demo.studentUt;
+  const script = demo.subject === "Maths" ? SCRIPT_MATHS : SCRIPT;
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(SCRIPT);
+      await navigator.clipboard.writeText(script);
       demo.dispatch({ type: "patch", patch: { copied: true, toast: "已複製 WhatsApp 話術。先講進度，再講做法。" } });
     } catch {
-      demo.dispatch({ type: "patch", patch: { copied: true, toast: SCRIPT } });
+      demo.dispatch({ type: "patch", patch: { copied: true, toast: script } });
     }
   };
 
@@ -32,7 +35,7 @@ export function CsmView() {
           <div>
             <p className="text-sm">Oscar 本週已滿 5/5。新的「攻堅支援 [重點]」不再堆給他。</p>
             <div className="mt-2 space-y-1 text-sm">
-              <p className="rounded-lg bg-[#3a1c22] px-2 py-2">① 攻堅支援 [重點] · 陳*軒 · 折射紅點後 48h</p>
+              <p className="rounded-lg bg-[#3a1c22] px-2 py-2">① 攻堅支援 [重點] · 陳*軒 · {demo.subject === "Maths" ? "SM02.2 變號斷點後 48h" : "折射紅點後 48h"}</p>
               <p className="rounded-lg bg-white/5 px-2 py-2">② 暖心作息 [重點] · 何*言 · 仍留在原 KOC</p>
               <p className="rounded-lg bg-white/5 px-2 py-2">③ 正向突破 [轉化] · 李*晴 · 轉 CSM 邀約即可</p>
             </div>
@@ -41,7 +44,9 @@ export function CsmView() {
                 <div key={owner} className="rounded-lg bg-black/20 p-2 text-[11px]">
                   <p className="text-[#e4c07a]">{owner === "jason" ? "Oscar" : owner === "chloe" ? "Chloe" : "CSM"}</p>
                   {demo.tickets.filter((ticket) => ticket.owner === owner).map((ticket) => (
-                    <p key={ticket.id} className="mt-1">{ticket.title}</p>
+                    <p key={ticket.id} className="mt-1">
+                      {demo.subject === "Maths" ? ticket.title.replace("折射", "SM02.2 變號") : ticket.title}
+                    </p>
                   ))}
                 </div>
               ))}
@@ -60,7 +65,7 @@ export function CsmView() {
           </div>
           <div className="rounded-xl bg-[#10281f] p-3 text-sm leading-6">
             <p className="text-[11px] text-[#b6f3d2]">報憂轉專業</p>
-            <p>{SCRIPT}</p>
+            <p>{script}</p>
             <button className="mt-2 rounded-lg bg-white/10 px-2 py-1 text-xs" onClick={copy}>
               {demo.copied ? "已複製" : "一鍵複製到 WhatsApp"}
             </button>
@@ -91,7 +96,7 @@ export function CsmView() {
               <tr className="border-t border-white/10">
                 <td className="py-2">陳*軒</td>
                 <td>
-                  {demo.badge ? "🏅 剛點亮徽章" : "折射追蹤中"}
+                  {demo.badge ? "🏅 剛點亮徽章" : demo.subject === "Maths" ? "SM02.2 追蹤中" : "折射追蹤中"}
                   {demo.utConfirmed && gap >= 15 ? ` · 實分低 ${gap}` : ""}
                   {demo.utAdjusted ? " · 已臨場調校" : ""}
                 </td>

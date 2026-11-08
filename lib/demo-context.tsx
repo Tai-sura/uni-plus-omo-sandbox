@@ -9,8 +9,9 @@ import {
   useReducer,
   type ReactNode,
 } from "react";
-import { activeTopics, isEbookPoint, JM29_LINES, lqTwinCard, packOf, teleScript, weakestExam, type EbookTab, type SubjectKey } from "./curriculum";
+import { activeTopics, isEbookPoint, JM29_LINES, leadExam, lqTwinCard, packOf, teleScript, type EbookTab, type SubjectKey } from "./curriculum";
 import { HERO, PAYOUT_OK, SEATS, TOPICS } from "./mock-data";
+import { approveKocPass } from "./koc-pass";
 import { lightOf, type HintLevel, type Light } from "./mastery";
 
 export type Role = "student" | "parent" | "ldc" | "koc" | "csm";
@@ -58,6 +59,7 @@ interface State {
   callout: Callout | null;
   highlight: string | null;
   toast: string | null;
+  tourNotice: string | null;
   includeUntested: boolean;
   showHiddenAxes: boolean;
   cart: string[];
@@ -173,6 +175,7 @@ const initial: State = {
   callout: null,
   highlight: null,
   toast: null,
+  tourNotice: null,
   includeUntested: false,
   showHiddenAxes: false,
   cart: [...packOf("Maths").topics].sort((a, b) => Number(b.hot) - Number(a.hot)).slice(0, 5).map((topic) => topic.code),
@@ -338,10 +341,35 @@ type Action =
   | { type: "koc-alert" }
   | { type: "parent-brief" }
   | { type: "csm-handoff" }
-  | { type: "brain-pass" }
   | { type: "ebook-nav"; dir: "next" | "all" | "prev" | "reset" }
   | { type: "ebook-break"; line: number }
   | { type: "ebook-sync" };
+
+function parentBriefFor(subject: SubjectKey, examCode: string | null, hotkeys: string[], focusId: string) {
+  const pack = packOf(subject);
+  const ebook = isEbookPoint(examCode);
+  const pointTopic = pack.topics.find((topic) =>
+    topic.subtopics.some((sub) => sub.code === examCode),
+  );
+  const lead = ebook
+    ? pack.topics.find((topic) => topic.code === "JM29") ?? pack.topics[0]
+    : pointTopic ?? pack.topics.find((topic) => topic.hot) ?? pack.topics[0];
+  const name = SEATS.find((seat) => seat.id === focusId)?.name ?? "鄭*博";
+  if (ebook) {
+    return {
+      title: "四邊形 · LQ 步驟得分率",
+      body: `${name}今週喺【四邊形】長題目透過課堂互動 e-Book 練成「先標菱形對角線平分 ∠DFE 搶 1M 步驟分」，並補齊定理理由 [prop. of rhombus]，由 42° 計到 34.5°，下次校內 UT 幾何長題目預計可穩袋滿分！`,
+      ink: true,
+    };
+  }
+  return {
+    title: `${lead.name_zh} · LQ 步驟得分率`,
+    body: `${teleScript(subject, hotkeys, name, examCode)} 長題目佔校內卷 70%，這週的目標是把斷點 1M 補上，由 1 分走向 2M + 1A。`,
+    // Physics reports always carry the refraction ink; Maths only when the
+    // rhombus e-Book point is the one on screen.
+    ink: subject === "Phy",
+  };
+}
 
 const ACTS: Record<Act, Callout & { patch: Partial<State> }> = {
   1: {
@@ -354,21 +382,33 @@ const ACTS: Record<Act, Callout & { patch: Partial<State> }> = {
       duo: false,
       phone: "student",
       desk: "koc",
+      focusId: "anson",
+      subject: "Phy",
+      smokeCode: "JPWM07",
+      examCode: "JPWM07.2",
+      cart: ["JPWM07", "SPEM01", "JPWM06", "JPWM08", "SPEM02"],
+      labOpen: false,
       phase: "day1",
       highlight: "radar",
       freshness: "idle",
+      ansonMissed: false,
     },
   },
   2: {
     act: 2,
     title: "第 2 幕 · 課堂冒煙與雙師分流",
-    body: "左屏 Anson 選錯折射題，右屏座位閃紅。錯題數升到 4，LDC 分流立刻把他改入「錯 ≥4 題」。右屏可在 KOC 與 LDC 之間切換。",
+    body: "左屏陳*軒選了 A，錯題數升到 4。84% 仍是淺綠。右屏 KOC 把他放進「錯 ≥4 題」，可改看 LDC 分流。",
     patch: {
       role: "koc",
       split: true,
       duo: false,
       phone: "student",
       desk: "koc",
+      focusId: "anson",
+      subject: "Phy",
+      smokeCode: "JPWM07",
+      examCode: "JPWM07.2",
+      labOpen: false,
       phase: "day1",
       highlight: "seat-anson",
       ansonMissed: true,
@@ -391,6 +431,9 @@ const ACTS: Record<Act, Callout & { patch: Partial<State> }> = {
       phone: "student",
       desk: "koc",
       phase: "h48",
+      subject: "Phy",
+      smokeCode: "JPWM07",
+      examCode: "JPWM07.2",
       highlight: "twin",
       twinCorrect: false,
       qStage: "eyes",
@@ -408,6 +451,9 @@ const ACTS: Record<Act, Callout & { patch: Partial<State> }> = {
       phone: "parent",
       desk: "koc",
       phase: "h48",
+      subject: "Phy",
+      smokeCode: "JPWM07",
+      examCode: "JPWM07.2",
       highlight: "parent-lock",
       twinCorrect: true,
       burst: 1,
@@ -424,11 +470,20 @@ const ACTS: Record<Act, Callout & { patch: Partial<State> }> = {
       split: true,
       duo: true,
       desk: "ldc",
+      subject: "Maths",
+      smokeCode: "JM29",
+      examCode: "JM29.2",
       highlight: "leader",
       freshness: "idle",
     },
   },
 };
+
+export function actScript(act: Act | null) {
+  if (!act) return null;
+  const spec = ACTS[act];
+  return { title: spec.title, body: spec.body };
+}
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
@@ -439,7 +494,7 @@ function reducer(state: State, action: Action): State {
     case "act": {
       const spec = ACTS[action.act];
       const studentTab = action.act === 1 ? "radar" : action.act === 2 || action.act === 3 ? "quest" : state.studentTab;
-      return {
+      const next = {
         ...state,
         ...spec.patch,
         studentTab,
@@ -447,9 +502,17 @@ function reducer(state: State, action: Action): State {
         act: action.act,
         callout: spec,
         entered: true,
+        labOpen: false,
+        barCollapsed: false,
+        tourNotice: null,
         autoTour: action.keepTour ? state.autoTour : false,
         tourLeft: action.keepTour ? 40 : state.tourLeft,
       };
+      // Act 4 promises an ink snapshot on the parent phone, so attach it on entry.
+      if (action.act === 4 && !next.parentBrief) {
+        next.parentBrief = parentBriefFor(next.subject, next.examCode, next.hotkeys, next.focusId);
+      }
+      return next;
     }
     case "phase": {
       const freshness: Freshness = action.phase === "preexam" ? "quiz" : "idle";
@@ -479,7 +542,7 @@ function reducer(state: State, action: Action): State {
         highlight: "seat-anson",
         regrouped: true,
         classMode: "small",
-        toast: "Anson 選錯，錯題數升到 4。座位閃紅，LDC 已把他改入「錯 ≥4 題」。",
+        toast: "陳*軒選了 A，錯題數升到 4。84% 仍是淺綠，LDC 已把他改入「錯 ≥4 題」。",
       };
     case "correct-answer":
       return {
@@ -613,18 +676,31 @@ function reducer(state: State, action: Action): State {
     case "audit":
       return { ...state, audit: { ...state.audit, [action.key]: action.value } };
     case "pass": {
-      const ready = state.audit.metal >= 60 && state.audit.wood >= 60 && state.audit.fire >= 60;
-      if (!ready) return { ...state, toast: "三軸未過 60。這次是 Review，退回 KOC 重錄，不蓋印章。" };
-      if (state.video !== "uploaded" && state.video !== "passed") {
-        return { ...state, toast: "KOC 尚未上傳本月 Topic 錄影。可先預覽印章，但晉升尚未結算。" };
+      const result = approveKocPass({
+        metal: state.audit.metal,
+        wood: state.audit.wood,
+        fire: state.audit.fire,
+        video: state.video,
+        promoted: state.promoted,
+        royalty: state.royalty,
+        eduToken: state.eduToken,
+      });
+      if (!result.ok && result.reason === "review") {
+        return { ...state, toast: "三軸未過 60。這次是 Review，退回 KOC 重錄，不蓋印章。" };
+      }
+      if (!result.ok && result.reason === "no-video") {
+        return { ...state, toast: "KOC 尚未上傳本月 Topic 錄影。版稅與晉升都尚未結算。" };
+      }
+      if (!result.ok) {
+        return { ...state, toast: `已經 Pass。督導版稅維持 ${state.royalty.toFixed(1)} EduToken，不會再加。` };
       }
       return {
         ...state,
-        video: "passed",
-        promoted: true,
-        royalty: Math.round((state.royalty + 0.5) * 10) / 10,
-        eduToken: Math.round((state.eduToken + 0.5) * 10) / 10,
-        toast: "Pass。已蓋上雙師冠名印章，督導版稅 +0.5 EduToken，Oscar 晉升 KOC Leader。",
+        video: result.video,
+        promoted: result.promoted,
+        royalty: result.royalty,
+        eduToken: result.eduToken,
+        toast: `Pass。督導版稅 ${state.royalty.toFixed(1)} → ${result.royalty.toFixed(1)} EduToken，Oscar 晉升 KOC Leader。再按不會加幣。`,
       };
     }
     case "mask-accept": {
@@ -688,16 +764,26 @@ function reducer(state: State, action: Action): State {
         split: true,
         instructionOpen: action.id === "anson" ? true : state.instructionOpen,
         highlight: action.id === "anson" ? "seat-anson" : "focus-profile",
-        toast: action.id === "anson" ? "已回到陳*軒主線。" : "已打開這位同學的雷達與工單。陳*軒的主線仍保留。",
+        toast: `左屏已切到${SEATS.find((seat) => seat.id === action.id)?.name ?? "這位同學"}的個人雷達。`,
       };
     case "tour-start":
       return {
         ...reducer({ ...state, autoTour: true, tourLeft: 40, entered: true }, { type: "act", act: 1, keepTour: true }),
         autoTour: true,
         tourLeft: 40,
+        tourNotice: null,
       };
-    case "tour-stop":
-      return { ...state, autoTour: false, toast: "自動巡遊已停止。" };
+    case "tour-stop": {
+      const spec = state.act ? ACTS[state.act] : null;
+      const where = spec ? `已停止巡遊，停在${spec.title}。` : "已停止巡遊。";
+      return {
+        ...state,
+        autoTour: false,
+        toast: where,
+        tourNotice: spec ? `${spec.title}。${spec.body}` : "巡遊已停止。",
+        callout: spec ?? state.callout,
+      };
+    }
     case "tour-tick": {
       if (!state.autoTour) return state;
       if (state.tourLeft > 1) return { ...state, tourLeft: state.tourLeft - 1 };
@@ -802,24 +888,30 @@ function reducer(state: State, action: Action): State {
     case "subject": {
       const pack = packOf(action.subject);
       const ordered = [...pack.topics].sort((a, b) => Number(b.hot) - Number(a.hot));
-      return {
+      const exam = leadExam(action.subject);
+      const next = {
         ...state,
         subject: action.subject,
         cart: ordered.slice(0, 5).map((topic) => topic.code),
         hotkeys: [],
-        smokeCode: weakestExam(action.subject).topic,
-        examCode: weakestExam(action.subject).code,
+        smokeCode: exam.topic,
+        examCode: exam.code,
         studentCard: null,
         ebookOpen: false,
         ebookShown: 0,
         ebookBreak: null,
         ebookRun: 0,
-        ebookTab: "rhombus",
+        ebookTab: "rhombus" as const,
         kocEbook: false,
         toast: action.subject === "Phy"
           ? "已切換物理科。左右屏同步為光的折射與靜電學，不顯示 MA。"
           : "已切換數學科。今日激活 SM02 一元二次方程與 JM29 四邊形 e-Book。",
       };
+      // Keep an already-open parent report in the same subject as the phone.
+      if (next.parentBrief) {
+        next.parentBrief = parentBriefFor(next.subject, next.examCode, next.hotkeys, next.focusId);
+      }
+      return next;
     }
     case "ebook-nav": {
       const max = JM29_LINES.length;
@@ -870,29 +962,15 @@ function reducer(state: State, action: Action): State {
         toast: "已將 4 位 <50% 微支線學生標記為 KOC 座位表高優紅點。",
       };
     case "parent-brief": {
-      const pack = packOf(state.subject);
-      const lead = isEbookPoint(state.examCode)
-        ? pack.topics.find((topic) => topic.code === "JM29") ?? pack.topics[0]
-        : pack.topics.find((topic) => topic.hot) ?? pack.topics[0];
-      const name = SEATS.find((seat) => seat.id === state.focusId)?.name ?? "鄭*博";
-      const ebook = isEbookPoint(state.examCode);
+      const brief = parentBriefFor(state.subject, state.examCode, state.hotkeys, state.focusId);
       return {
         ...state,
         split: true,
         phone: "parent",
         waOpened: true,
         unlocked: true,
-        parentBrief: ebook
-          ? {
-              title: "四邊形 · LQ 步驟得分率",
-              body: `${name}今週喺【四邊形】長題目透過課堂互動 e-Book 練成「先標菱形對角線平分 ∠DFE 搶 1M 步驟分」，並補齊定理理由 [prop. of rhombus]，由 42° 計到 34.5°，下次校內 UT 幾何長題目預計可穩袋滿分！`,
-              ink: true,
-            }
-          : {
-              title: `${lead.name_zh} · LQ 步驟得分率`,
-              body: `${teleScript(state.subject, state.hotkeys, name, state.examCode)} 長題目佔校內卷 70%，這週的目標是把斷點 1M 補上，由 1 分走向 2M + 1A。`,
-            },
-        toast: ebook ? "家長手機已打開 e-Book 筆跡快照戰報。" : "家長手機已打開 LQ 步驟提分戰報。",
+        parentBrief: brief,
+        toast: brief.ink ? "家長手機已打開筆跡快照戰報。" : "家長手機已打開 LQ 步驟提分戰報。",
       };
     }
     case "csm-handoff": {
@@ -905,16 +983,6 @@ function reducer(state: State, action: Action): State {
         ...state,
         tickets: [...state.tickets, { id: `hazard-${state.tickets.length + 1}`, title, tier: "priority", owner: "csm" }],
         toast: `已把 ${name} 轉交 CSM 臨場調校工單。`,
-      };
-    }
-    case "brain-pass": {
-      const ready = state.audit.metal >= 60 && state.audit.wood >= 60 && state.audit.fire >= 60;
-      if (!ready) return { ...state, toast: "三軸未過 60。這次是 Review，不發放版稅。" };
-      return {
-        ...state,
-        royalty: 14,
-        eduToken: Math.round((state.eduToken + 1.5) * 10) / 10,
-        toast: "已核准。督導版稅由 12.5 增至 14.0 EduToken，並同步到 KOC。",
       };
     }
     default:

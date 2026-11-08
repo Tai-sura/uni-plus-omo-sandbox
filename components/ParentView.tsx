@@ -5,13 +5,26 @@ import { PolarAngleAxis, PolarGrid, Radar, RadarChart, ResponsiveContainer } fro
 import { packOf } from "@/lib/curriculum";
 import { DIAG, HERO, IS_AXES, QUOTES, SEATS } from "@/lib/mock-data";
 import { useDemo } from "@/lib/demo-context";
-import { RhombusInk } from "./EbookKit";
+import { heroTopicCode, seatFocusScore } from "@/lib/student-profile";
+import { RefractionInk, RhombusInk } from "./EbookKit";
 import { Card, LightPill, ScoreBar } from "./ui";
 
-const VOICE = {
-  ldc: "家長您好，我是林知行。這一課全班先抓住光密走向光疏會遠離法線。陳軒唔使加做整張卷，只要把折射角和入射角的大小關係說清楚。",
-  koc: "陳軒家長，我是 Oscar。他今天把水進空氣聽成靠近法線。我已經用十五秒分步卡跟他拆過。你不用陪讀，只要聽完這三句。",
+const VOICE: Record<"Phy" | "Maths", { ldc: string; koc: string }> = {
+  Phy: {
+    ldc: "家長您好，我是林知行。這一課全班先抓住光密走向光疏會遠離法線。陳軒唔使加做整張卷，只要把折射角和入射角的大小關係說清楚。",
+    koc: "陳軒家長，我是 Oscar。他今天把水進空氣聽成靠近法線。我已經用十五秒分步卡跟他拆過。你不用陪讀，只要聽完這三句。",
+  },
+  Maths: {
+    ldc: "家長您好，我是林知行。這一課全班先抓住「相異實根」要寫 Δ 大於零。陳軒唔使加做整張卷，只要把判別式和變號那一步說清楚。",
+    koc: "陳軒家長，我是 Oscar。他今天漏看「相異實根」，把條件寫成大於等於零。我已經用十五秒分步卡跟他拆過。你不用陪讀，只要聽完這三句。",
+  },
 };
+
+const QUOTES_MATHS = [
+  "先圈出「相異實根」，再寫 Δ 大於零。",
+  "展開括號時，負正得負，唔好漏變號。",
+  "答案要寫範圍，唔係寫一個數。",
+];
 
 export function ParentView() {
   const demo = useDemo();
@@ -77,18 +90,30 @@ export function ParentView() {
   }
 
   const focus = SEATS.find((seat) => seat.id === demo.focusId);
-  const before = demo.focusId === "anson" ? 45 : Math.max(30, (focus?.mastery ?? 60) - 18);
-  const after = demo.focusId === "anson" ? demo.heroScore : focus?.mastery ?? 60;
+  const after = seatFocusScore(demo.subject, demo.focusId, demo.heroScore, demo.examCode);
+  const before = demo.focusId === "anson" ? Math.max(30, after - 39) : Math.max(30, after - 18);
   const gap = demo.studentUt == null ? null : demo.predictedLive - demo.studentUt;
   const pack = packOf(demo.subject);
-  const lead = demo.parentBrief?.ink
+  const heroCode = heroTopicCode(demo.subject, demo.examCode);
+  const pointTopic = pack.topics.find((topic) =>
+    topic.subtopics.some((sub) => sub.code === demo.examCode),
+  );
+  const lead = demo.parentBrief?.ink && demo.subject === "Maths"
     ? pack.topics.find((topic) => topic.code === "JM29") ?? pack.topics[0]
-    : pack.topics.find((topic) => topic.hot) ?? pack.topics[0];
+    : pointTopic ?? pack.topics.find((topic) => topic.code === heroCode) ?? pack.topics.find((topic) => topic.hot) ?? pack.topics[0];
 
   return (
     <div className="space-y-3">
       <header>
-        <p className="text-[11px] text-[#e4c07a]">🎯 第一步：播 15 秒語音，再看菱形筆跡快照。PIN 8821。</p>
+        <p className="text-[11px] text-[#e4c07a]">
+          🎯 第一步：播 15 秒語音，再看
+          {demo.parentBrief?.ink
+            ? demo.subject === "Maths"
+              ? "菱形筆跡快照"
+              : "折射筆跡快照"
+            : "本週提分報告"}
+          。PIN 8821。
+        </p>
         <h2 className="text-xl font-bold">{focus?.name ?? "陳*軒"} · {lead.name_zh}</h2>
         <p className="text-[11px] text-[#93a4b8]">這裡只有 StarCoins {demo.coins.anson ?? demo.starCoins}。EduToken 不會出現在家長手機。</p>
         <p className="text-[11px] text-[#93a4b8]">{HERO.school} · {HERO.form}</p>
@@ -99,9 +124,20 @@ export function ParentView() {
           <p className="text-sm leading-6">{demo.parentBrief.body}</p>
           {demo.parentBrief.ink ? (
             <div className="mt-2 rounded-xl bg-[#f4efe4] p-2 text-[#21180f]">
-              <p className="text-[12px] font-bold">📄 已附上課堂 e-Book 老師親筆批註快照 · Export PDF with ink</p>
-              <RhombusInk runId={0} pen="both" frame={12} />
-              <p className="text-center text-[11px]">∠DFE = 34.5° [property of rhombus]</p>
+              <p className="text-[12px] font-bold">
+                📄 訂正快照預覽（沙盒示意，不是已匯出的 PDF）
+              </p>
+              {demo.subject === "Maths" ? (
+                <>
+                  <RhombusInk runId={0} pen="both" frame={12} />
+                  <p className="text-center text-[11px]">∠DFE = 34.5° [property of rhombus]</p>
+                </>
+              ) : (
+                <>
+                  <RefractionInk />
+                  <p className="text-center text-[11px]">折射線遠離法線 · 折射角大於入射角</p>
+                </>
+              )}
             </div>
           ) : null}
         </Card>
@@ -121,19 +157,29 @@ export function ParentView() {
           </div>
         </div>
         <ul className="mt-3 space-y-1 text-sm">
-          <li>1 進步：折射判斷已離開「背口訣」。</li>
-          <li>1 重心：仍然要先講光密還是光疏。</li>
-          <li>1 行動：不用加卷，聽完下面 3 句即可。</li>
+          {demo.subject === "Maths" ? (
+            <>
+              <li>1 進步：已經識得先圈「相異實根」，再寫 Δ &gt; 0。</li>
+              <li>1 重心：展開括號時仍然會漏變號。</li>
+              <li>1 行動：不用加卷，聽完下面 3 句即可。</li>
+            </>
+          ) : (
+            <>
+              <li>1 進步：折射判斷已離開「背口訣」。</li>
+              <li>1 重心：仍然要先講光密還是光疏。</li>
+              <li>1 行動：不用加卷，聽完下面 3 句即可。</li>
+            </>
+          )}
         </ul>
       </Card>
 
       <Card id="voice" kicker="1+1 雙師" title="名師導航 + 個人點評">
         <div className="grid gap-2">
           <VoiceButton label="林知行 · 20 秒班級導航" active={demo.voice === "ldc"} onClick={() => play(demo, "ldc")} />
-          <VoiceButton label="Oscar · 15 秒個人點評" active={demo.voice === "koc"} onClick={() => play(demo, "koc")} />
+          <VoiceButton label="Oscar · 語音稿預覽（本機朗讀，不是親錄音檔）" active={demo.voice === "koc"} onClick={() => play(demo, "koc")} />
         </div>
         <div className="mt-3 space-y-2">
-          {QUOTES.map((quote, index) => (
+          {(demo.subject === "Maths" ? QUOTES_MATHS : QUOTES).map((quote, index) => (
             <div key={quote} className="rounded-xl bg-[#f4efe4] px-3 py-2 text-sm text-[#1c1408]">
               <span className="num mr-2 text-[#8a5a12]">0{index + 1}</span>
               {quote}
@@ -203,7 +249,9 @@ export function ParentView() {
             )}
           </div>
         ) : (
-          <p className="mt-2 text-[11px] text-[#93a4b8]">折射尚未到深綠。可按時間機器去 +48h 並答對雙胞胎。</p>
+          <p className="mt-2 text-[11px] text-[#93a4b8]">
+            {demo.subject === "Maths" ? "判別式尚未到深綠。可按時間機器去 +48h 並答對雙胞胎。" : "折射尚未到深綠。可按時間機器去 +48h 並答對雙胞胎。"}
+          </p>
         )}
       </Card>
     </div>
@@ -214,7 +262,7 @@ function play(demo: ReturnType<typeof useDemo>, who: "ldc" | "koc") {
   demo.dispatch({ type: "patch", patch: { voice: who } });
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
-  const utter = new SpeechSynthesisUtterance(VOICE[who]);
+  const utter = new SpeechSynthesisUtterance(VOICE[demo.subject][who]);
   utter.lang = "zh-HK";
   utter.rate = 1;
   window.speechSynthesis.speak(utter);

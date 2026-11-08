@@ -6,7 +6,8 @@ import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, Responsi
 import { useDemo } from "@/lib/demo-context";
 import { CAPSULES, MA_MAP, QUESTIONS, SEATS, seatProfile } from "@/lib/mock-data";
 import { RefractionInk, RhombusInk, StudentEbookCard, StudentEbookMirror } from "./EbookKit";
-import { FOCUS_RADAR, findSubtopic, lqPaper, packOf } from "@/lib/curriculum";
+import { findSubtopic, lqPaper, packOf } from "@/lib/curriculum";
+import { heroTopicCode, seatChapterScore, seatFocusScore, seatFocusTopics, seatPointScore } from "@/lib/student-profile";
 import { calcMastery, LIGHT_META, type HintLevel } from "@/lib/mastery";
 import { Card, LightPill, ScoreBar } from "./ui";
 
@@ -14,8 +15,10 @@ export function StudentView() {
   const demo = useDemo();
   const pack = packOf(demo.subject);
   const focus = SEATS.find((seat) => seat.id === demo.focusId) ?? SEATS[0];
-  const personal = focus.id === "anson" ? demo.heroScore : focus.mastery;
-  const lead = pack.topics.find((topic) => topic.hot) ?? pack.topics[0];
+  const personal = seatFocusScore(demo.subject, focus.id, demo.heroScore, demo.examCode);
+  const personalTopics = seatFocusTopics(demo.subject, focus.id, demo.heroScore, demo.examCode);
+  const heroCode = heroTopicCode(demo.subject, demo.examCode);
+  const lead = pack.topics.find((topic) => topic.code === heroCode) ?? pack.topics.find((topic) => topic.hot) ?? pack.topics[0];
   const formula = calcMastery(demo.mInit, demo.hint, demo.m48);
 
   const radar = useMemo(() => {
@@ -24,9 +27,9 @@ export function StudentView() {
       .map((chapter) => ({
         axis: chapter.code,
         klass: chapter.score ?? 0,
-        mine: Math.max(18, (chapter.score ?? 0) - (focus.id === "s4" ? 28 : focus.id === "s10" ? 12 : focus.id === "anson" ? 6 : 0)),
+        mine: seatChapterScore(demo.subject, focus.id, demo.heroScore, demo.examCode, chapter.code),
       }));
-  }, [pack, demo.includeUntested, focus.id]);
+  }, [pack, demo.includeUntested, demo.subject, demo.heroScore, demo.examCode, focus.id]);
 
   const tab = demo.studentTab;
   const utLabel = demo.phase === "preexam" ? "距校內 UT 10 日 · 保鮮" : demo.phase === "decay" ? "距校內 UT 22 日 · 已衰減" : "距校內 UT 22 日 · 常規";
@@ -44,18 +47,27 @@ export function StudentView() {
         <div className="mt-2 flex flex-wrap gap-1">
           {peers.map(([id, name, kind]) => {
             const seat = SEATS.find((item) => item.id === id)!;
-            const score = id === "anson" ? demo.heroScore : seat.mastery;
+            const score = seatFocusScore(demo.subject, seat.id, demo.heroScore, demo.examCode);
             return (
-              <button key={id} className={`rounded-full px-2 py-1 text-[10px] ${demo.focusId === id ? "bg-[#e4c07a] text-[#1b1406]" : "bg-white/10"}`} onClick={() => demo.dispatch({ type: "patch", patch: { focusId: id } })}>
+              <button key={id} className={`rounded-full px-2 py-1 text-[10px] ${demo.focusId === id ? "bg-[#e4c07a] text-[#1b1406]" : "bg-white/10"}`} onClick={() => demo.dispatch({ type: "focus", id })}>
                 {name} {kind} {score}%
               </button>
             );
           })}
+          {peers.some(([id]) => id === focus.id) ? null : (
+            <button className="rounded-full bg-[#e4c07a] px-2 py-1 text-[10px] font-bold text-[#1b1406]" onClick={() => demo.dispatch({ type: "focus", id: focus.id })}>
+              {focus.name} 座位 {personal}%
+            </button>
+          )}
         </div>
         <div className="mt-2 flex items-start justify-between gap-2">
           <div>
-            <p className="text-[11px] text-[#93a4b8]">⏳ {utLabel}</p>
-            <p className="text-[11px]">🎯 預測 M_exam {pack.mExam}% · 🪙 StarCoins {demo.starCoins}</p>
+            <h2 className="text-lg font-bold">{focus.name} · {focus.en}</h2>
+            <p className="text-[11px] text-[#93a4b8]">⏳ {utLabel} · 錯 {focus.id === "anson" ? demo.ansonWrongs : focus.wrongs} 題</p>
+            <p className="text-[11px]">
+              🎯 個人掌握度 {personal}% · {lead.code} {lead.name_zh}
+              {focus.id === "anson" ? ` · 🪙 StarCoins ${demo.starCoins}` : " · 其他課題為示範估算"}
+            </p>
           </div>
           <LightPill score={personal} />
         </div>
@@ -79,11 +91,14 @@ export function StudentView() {
         </div>
         <p className="mt-2 text-[11px] text-[#e4c07a]">長題目步驟分佔校內卷 70% · MC 概念快測 30%</p>
         <p className="mt-2 text-[11px] leading-5 text-[#c5d0de]">
-          {demo.phase === "day1" && "Day 1 初練已封頂 84% 淺綠。原始分先不寫進深綠，等 48 小時雙胞胎。"}
-          {demo.phase === "h48" && !demo.twinCorrect && `雙胞胎題已送到同一 Level 3：${lead.subtopics[1]?.code ?? lead.subtopics[0].code}。答對才可衝破 85%。`}
-          {demo.phase === "h48" && demo.twinCorrect && "已鎖定 91% 深綠。日常練習豁免，課堂只做保鮮。"}
-          {demo.phase === "decay" && "逾期超過 7 日，由深綠衰減至 76% 淺綠。不是歸零，只是失去豁免。"}
-          {demo.phase === "preexam" && "考前 14–8 日。先做 30 秒保鮮，再經雙重確認才寫回雷達。"}
+          {demo.phase === "day1" && focus.id === "anson" && demo.subject === "Phy" && `Day 1 初練已封頂 ${personal}% 淺綠。原始分先不寫進深綠，等 48 小時雙胞胎。`}
+          {demo.phase === "day1" && focus.id === "anson" && demo.subject === "Maths" && `Day 1 先補 ${lead.code} ${lead.name_zh}，個人 ${personal}%。LQ 步驟分只認 1M / 1M / 1A。`}
+          {demo.phase === "day1" && focus.id !== "anson" && `${focus.name} 的 ${lead.code} 個人掌握度是 ${personal}%，右屏座位圖同一個數字。`}
+          {demo.phase !== "day1" && demo.subject === "Maths" && `${lead.code} ${lead.name_zh} 個人 ${personal}%。`}
+          {demo.phase === "h48" && demo.subject === "Phy" && !demo.twinCorrect && `雙胞胎題已送到同一 Level 3：${lead.subtopics[1]?.code ?? lead.subtopics[0].code}。答對才可衝破 85%。`}
+          {demo.phase === "h48" && demo.subject === "Phy" && demo.twinCorrect && "已鎖定 91% 深綠。日常練習豁免，課堂只做保鮮。"}
+          {demo.phase === "decay" && demo.subject === "Phy" && "逾期超過 7 日，由深綠衰減至 76% 淺綠。不是歸零，只是失去豁免。"}
+          {demo.phase === "preexam" && demo.subject === "Phy" && "考前 14–8 日。先做 30 秒保鮮，再經雙重確認才寫回雷達。"}
         </p>
         {demo.twinCorrect && demo.phase !== "decay" ? (
           <div className="mt-2 inline-block -rotate-6 rounded-md border-2 border-[#8ee0b2] px-2 py-1 text-xs font-black tracking-widest text-[#8ee0b2]">
@@ -95,13 +110,17 @@ export function StudentView() {
 
       {demo.phase === "h48" && !demo.twinCorrect ? (
         <Card id="twin" kicker="Level 3 雙胞胎" title={`${lead.subtopics[1]?.code ?? lead.code} · 同一知識點，換一個情境`}>
-          <p className="text-sm leading-6">原題是水入空氣。雙胞胎改成：光線由玻璃斜向射入空氣。下列哪句正確？</p>
+          <p className="text-sm leading-6">
+            {demo.subject === "Maths"
+              ? "原題問「兩個相異實根」。雙胞胎改成：方程有實根。判別式條件應怎樣寫？"
+              : "原題是水入空氣。雙胞胎改成：光線由玻璃斜向射入空氣。下列哪句正確？"}
+          </p>
           <div className="mt-2 grid gap-2">
             <button className="rounded-xl bg-[#e24b3c] px-3 py-2 text-left text-sm" onClick={() => demo.dispatch({ type: "twin", ok: false })}>
-              折射角小於入射角
+              {demo.subject === "Maths" ? "Δ > 0（仍用嚴格大於）" : "折射角小於入射角"}
             </button>
             <button className="rounded-xl bg-[#143524] px-3 py-2 text-left text-sm" onClick={() => demo.dispatch({ type: "twin", ok: true })}>
-              折射角大於入射角
+              {demo.subject === "Maths" ? "Δ ≥ 0（有實根可為重根）" : "折射角大於入射角"}
             </button>
           </div>
         </Card>
@@ -113,13 +132,15 @@ export function StudentView() {
             <p className="text-sm text-[#b6f3d2]">已鎖定。單題結果不會直接改寫整題雷達。</p>
           ) : (
             <>
-              <p className="text-sm leading-6">光由光密進入光疏，折射線會怎樣？</p>
+              <p className="text-sm leading-6">
+                {demo.subject === "Maths" ? "方程有兩個相異實根時，判別式要怎樣？" : "光由光密進入光疏，折射線會怎樣？"}
+              </p>
               <div className="mt-2 grid gap-2">
                 <button className="rounded-xl bg-white/10 px-3 py-2 text-sm" onClick={() => demo.dispatch({ type: "fresh", ok: false })}>
-                  靠近法線
+                  {demo.subject === "Maths" ? "Δ ≥ 0" : "靠近法線"}
                 </button>
                 <button className="rounded-xl bg-white/10 px-3 py-2 text-sm" onClick={() => demo.dispatch({ type: "fresh", ok: true })}>
-                  遠離法線
+                  {demo.subject === "Maths" ? "Δ > 0" : "遠離法線"}
                 </button>
               </div>
               {demo.freshness === "buffer" ? (
@@ -136,6 +157,7 @@ export function StudentView() {
       </div>
 
       <div className={tab === "radar" ? "space-y-3" : "hidden"}>
+      {demo.focusId !== "anson" ? <FocusCard /> : null}
 
       <Card id="radar" kicker="Level 1 Chapter" title="章節雷達只作宏觀，不進購物車">
         <div className="mb-2 flex flex-wrap gap-1">
@@ -150,7 +172,7 @@ export function StudentView() {
           ))}
         </div>
         <div className="h-52">
-          {radar.length >= 3 ? (
+          {tab === "radar" && radar.length >= 3 ? (
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart data={radar} outerRadius="68%">
                 <PolarGrid stroke="#2c4664" />
@@ -160,6 +182,8 @@ export function StudentView() {
                 <Radar dataKey="mine" stroke="#e4c07a" fill="#e4c07a" fillOpacity={0.45} />
               </RadarChart>
             </ResponsiveContainer>
+          ) : radar.length >= 3 ? (
+            <div className="h-full w-full" />
           ) : (
             <p className="text-sm text-[#93a4b8]">可見章節少於 3。打開「包含未測」即可看見未測章。</p>
           )}
@@ -178,7 +202,8 @@ export function StudentView() {
           ⚔️ 立即進入破關艙
         </button>
         <p className="mt-2 text-[11px] leading-5">
-          今日補凹角：{demo.subject === "Maths" ? "JM29.2 菱形長題目，個人 44%" : "JPWM07.2 水入空氣，雷達 69%"}。完成破關可領 StarCoins，不會把 EduToken 算進學生錢包。
+          今日補凹角：{focus.name} {lead.code} 個人 {personal}%。{demo.subject === "Maths" ? "先補 LQ 最弱的 1M 步驟分。" : "先補 JPWM07.2 水入空氣。"}
+          {focus.id === "anson" ? "完成破關可領 StarCoins。" : ""}
         </p>
       </Card>
 
@@ -193,43 +218,48 @@ export function StudentView() {
         </div>
         <div className="space-y-2">
           {demo.levelView === "chapter"
-            ? pack.chapters.map((chapter) => (
-                <div key={chapter.code} className="rounded-xl bg-black/20 p-2">
-                  <div className="mb-1 flex items-center justify-between gap-2">
-                    <div>
-                      <p className="text-[10px] text-[#93a4b8]">{chapter.code} · {chapter.name_en}</p>
-                      <p className="text-sm font-semibold">{chapter.name_zh}</p>
+            ? pack.chapters.map((chapter) => {
+                const mine = seatChapterScore(demo.subject, focus.id, demo.heroScore, demo.examCode, chapter.code);
+                return (
+                  <div key={chapter.code} className="rounded-xl bg-black/20 p-2">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <div>
+                        <p className="text-[10px] text-[#93a4b8]">{chapter.code} · {chapter.name_en}</p>
+                        <p className="text-sm font-semibold">{chapter.name_zh}</p>
+                      </div>
+                      <LightPill score={mine} compact />
                     </div>
-                    <LightPill score={chapter.score} compact />
+                    <ScoreBar score={mine} />
+                    <p className="mt-1 text-[10px] text-[#93a4b8]">個人 {mine}% · 班級 {chapter.score ?? "—"}%</p>
                   </div>
-                  <ScoreBar score={chapter.score} />
-                </div>
-              ))
-            : pack.topics.map((topic) => (
-                <div key={topic.code} className="rounded-xl bg-black/20 p-2">
-                  <div className="mb-1 flex items-center justify-between gap-2">
-                    <div>
-                      <p className="text-[10px] text-[#93a4b8]">{topic.code} · {topic.shorthand}</p>
-                      <p className="text-sm font-semibold">
-                        {topic.name_zh}
-                        <span className="ml-1 text-[11px] font-normal text-[#93a4b8]">{topic.name_en}</span>
-                      </p>
+                );
+              })
+            : pack.topics.map((topic) => {
+                const mine = personalTopics.find((item) => item.code === topic.code)?.score ?? topic.classScore ?? 0;
+                return (
+                  <div key={topic.code} className="rounded-xl bg-black/20 p-2">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <div>
+                        <p className="text-[10px] text-[#93a4b8]">{topic.code} · {topic.shorthand}</p>
+                        <p className="text-sm font-semibold">
+                          {topic.name_zh}
+                          <span className="ml-1 text-[11px] font-normal text-[#93a4b8]">{topic.name_en}</span>
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {topic.hot ? <span className="text-[10px] text-[#ffb15a]">🔥 Top 2</span> : null}
+                        <LightPill score={mine} compact />
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      {topic.hot ? <span className="text-[10px] text-[#ffb15a]">🔥 Top 2</span> : null}
-                      <LightPill score={topic.classScore} compact />
-                    </div>
+                    <ScoreBar score={mine} />
+                    <p className="mt-1 text-[10px] text-[#93a4b8]">
+                      個人 {mine}% · 班級 {topic.classScore}%
+                    </p>
                   </div>
-                  <ScoreBar score={topic.classScore} />
-                  {focus.id === "anson" && topic.personal != null && topic.personal !== topic.classScore ? (
-                    <p className="mt-1 text-[10px] text-[#93a4b8]">個人 {topic.personal}% · 班級 {topic.classScore}%</p>
-                  ) : null}
-                </div>
-              ))}
+                );
+              })}
         </div>
       </Card>
-
-      {demo.focusId !== "anson" ? <FocusCard /> : null}
       </div>
 
       <div className={tab === "cart" ? "space-y-3" : "hidden"}>
@@ -274,7 +304,7 @@ export function StudentView() {
           </div>
         ) : (
           <div className="mt-2 space-y-2">
-            {demo.ansonMissed ? <p className="text-[11px] text-[#ffb4ac]">已選 A。右屏座位應該正在閃紅。</p> : <p className="text-[11px] text-[#b6f3d2]">已答對，紅點熄滅。</p>}
+            {demo.ansonMissed ? <p className="text-[11px] text-[#ffb4ac]">已選 A。錯題數 4。84% 仍是淺綠，右屏改看「錯 ≥4 題」。</p> : <p className="text-[11px] text-[#b6f3d2]">已答對，錯題數沒有上升。</p>}
             <p className="text-[11px] text-[#93a4b8]">點中真正決定方向的題眼。</p>
             <div className="grid grid-cols-3 gap-1">
               {(demo.subject === "Maths"
@@ -483,10 +513,12 @@ function StudentLqBoard() {
   if (ebookLive) return null;
   const point = findSubtopic(demo.subject, demo.examCode);
   const paper = lqPaper(demo.subject, demo.examCode);
+  const seat = SEATS.find((item) => item.id === demo.focusId) ?? SEATS[0];
+  const mine = seatPointScore(demo.subject, seat.id, demo.heroScore, demo.examCode);
   return (
     <div id="student-lq" className="rounded-2xl border border-[#e4c07a]/50 bg-[#1a1408] p-3">
       <p className="text-[10px] font-bold text-[#e4c07a]">📝 LQ 長題目 · 佔校內卷 70% · 1M / 1M / 1A</p>
-      <p className="mt-1 text-sm font-bold">{point.code} {point.name} · {point.score}%</p>
+      <p className="mt-1 text-sm font-bold">{point.code} {point.name} · 個人 {mine}%</p>
       <p className="mt-1 text-[12px] leading-5">{paper.stem}</p>
       <div className="mt-2 space-y-1">
         {paper.steps.map((step) => (
@@ -531,18 +563,20 @@ function LqSelfCheck() {
 function FocusCard() {
   const demo = useDemo();
   const profile = seatProfile(demo.focusId);
-  const radar = FOCUS_RADAR[demo.subject];
+  const seat = SEATS.find((item) => item.id === demo.focusId) ?? SEATS[0];
+  const topics = seatFocusTopics(demo.subject, seat.id, demo.heroScore, demo.examCode);
   return (
-    <Card id="focus-profile" kicker={`這位同學 · ${demo.subject === "Maths" ? "數學科" : "物理科"}`} title="主線同堂節奏">
+    <Card id="focus-profile" kicker={demo.subject === "Maths" ? "數學科個人頁" : "物理科個人頁"} title={`${seat.name} · ${seat.en}`}>
       <p className="text-sm leading-6">{profile.blurb}</p>
       <div className="mt-2 space-y-1">
-        {radar.map((topic) => (
+        {topics.map((topic) => (
           <div key={topic.code} className="flex items-center justify-between text-sm">
             <span>{topic.code} {topic.name}</span>
             <LightPill score={topic.score} compact />
           </div>
         ))}
       </div>
+      <p className="mt-2 text-[10px] text-[#93a4b8]">同一個數字同步在 KOC 座位圖與資優卡，點座位不會改動陳*軒主線。</p>
       <button className="mt-2 text-[11px] text-[#e4c07a]" onClick={() => demo.dispatch({ type: "focus", id: "anson" })}>
         回到陳*軒主線
       </button>

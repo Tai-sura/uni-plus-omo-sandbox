@@ -274,6 +274,21 @@ export function teleScript(subject: SubjectKey, keys: string[], student = "鄭*�
     }
     return `今日課題：一元二次方程（長題目特訓）。${student}已經掌握第 1 步列判別式穩攞 1M 步驟分；下一步我哋重點攻克第 2 步展開括號時嘅 R 審題 同 E 運算執行 變號盲點（輔助標示：MA3 圖文轉化 / MA2 代數運算），下次校內 UT 長題目就可以由攞 1 分躍升到袋齊 3 分滿分！`;
   }
+  if (subject === "Phy" && examCode?.startsWith("JPWM07")) {
+    if (keys.includes("2") && keys.includes("3")) {
+      return `今日課題：光的折射（3 分解釋題）。${student}已寫出水比空氣光密，但 R 審題漏看「斜向射入」、E 執行漏寫「折射角大於入射角」，仍會掉 1M。`;
+    }
+    if (keys.includes("2")) {
+      return `今日課題：光的折射（3 分解釋題）。${student}把「由水射入空氣」看成「由空氣入水」，屬 R 審題，方向一錯後面全錯。`;
+    }
+    if (keys.includes("3")) {
+      return `今日課題：光的折射（3 分解釋題）。${student}方向判斷對了，但漏寫「折射線遠離法線」或角度比較，屬 E 運算執行。`;
+    }
+    if (keys.includes("1")) {
+      return `今日課題：光的折射（3 分解釋題）。${student}仍未分清光密光疏，屬 C 概念理解。先記住水比空氣光密。`;
+    }
+    return `今日課題：光的折射（3 分解釋題）。${student}已能寫出水比空氣光密，下一步補「折射線遠離法線、折射角大於入射角」，校內 UT 這類題就可穩袋 2M + 1A。`;
+  }
   if (keys.includes("2") && keys.includes("3")) {
     return `今日課題：靜電學（3 分解釋長題目）。${student}操作步驟有分，但成因同結論的 R 審題、E 執行仍會掉 1M。記住只有自由電子會移動，正電荷唔會郁。呢度只講 C、R、E。`;
   }
@@ -402,6 +417,14 @@ export function weakestExam(subject: SubjectKey) {
     topic.subtopics.map((sub) => ({ ...sub, topic: topic.code })),
   );
   return [...rows].sort((a, b) => (a.score ?? 100) - (b.score ?? 100))[0];
+}
+
+/** 切科目時的破關題：跟今日第一個激活課題走，不跳去另一個 Topic 的最低分。 */
+export function leadExam(subject: SubjectKey) {
+  const pack = PACKS[subject];
+  const lead = pack.topics.find((topic) => topic.hot) ?? pack.topics[0];
+  const sub = [...lead.subtopics].sort((a, b) => (a.score ?? 100) - (b.score ?? 100))[0];
+  return { ...sub, topic: lead.code };
 }
 
 export function findSubtopic(subject: SubjectKey, code: string | null) {

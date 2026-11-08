@@ -243,7 +243,7 @@ export function RhombusInk({
         step += 1;
         setTick(step);
         if (step >= JM29_LINES.length) window.clearInterval(timer);
-      }, 900);
+      }, 1250);
       return () => window.clearInterval(timer);
     }
     setTick(frame ?? 0);

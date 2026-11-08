@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
+    "check": "node --experimental-strip-types scripts/check-rules.ts",
     "start": "next start"
   },
   "dependencies": {

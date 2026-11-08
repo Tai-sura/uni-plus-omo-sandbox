@@ -46,6 +46,19 @@ export function Sandbox() {
   return (
     <div className="min-h-screen">
       <ControlBar />
+      {demo.labOpen && demo.callout ? (
+        <div className="mx-auto max-w-[1440px] px-3 pt-3">
+          <div className="rounded-2xl border border-[#e4c07a]/40 bg-[#241c10] px-4 py-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-bold text-[#e4c07a]">{demo.callout.title}</p>
+                <p className="mt-1 text-sm leading-6 text-[#f3e6c8]">{demo.callout.body}</p>
+              </div>
+              <button className="text-xs text-[#e4c07a]" onClick={demo.dismissCallout}>關閉</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {demo.labOpen ? (
         <SocraticLab />
       ) : (

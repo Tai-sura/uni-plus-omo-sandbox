@@ -29,15 +29,22 @@ export function SocraticLab() {
   const cap = BAND[paper].max;
   const floor = BAND[paper].min;
   const stopped = left <= 0;
-  const code = maths ? "JM29.2" : "JPWM07.2";
+  const rhombus = maths && Boolean(demo.examCode?.startsWith("JM29"));
+  const code = maths ? (rhombus ? "JM29.2" : "SM02.2") : "JPWM07.2";
   const sheet = lqPaper(demo.subject, code);
-  const hitLabel = maths ? "兩個相異實根" : "水";
+  const hitLabel = maths ? (rhombus ? "∠DFE" : "兩個相異實根") : "水";
   const choices = maths
-    ? [
-        ["一元二次方程", false],
-        ["兩個相異實根", true],
-        ["實數 k", false],
-      ]
+    ? rhombus
+      ? [
+          ["對角線", false],
+          ["∠DFC = ∠DFE", true],
+          ["42°", false],
+        ]
+      : [
+          ["一元二次方程", false],
+          ["兩個相異實根", true],
+          ["實數 k", false],
+        ]
     : [
         ["水", true],
         ["空氣", false],
@@ -123,9 +130,13 @@ export function SocraticLab() {
 
       <section className="rounded-2xl border border-white/10 bg-[#102033] p-3">
         <p className="text-[11px] font-bold text-[#e4c07a]">SOC2 · 鐵律 2 首擊題眼 · 修復 [R 審題]{maths ? " · MA3 圖文轉化" : ""}</p>
-        <p className="mt-1 text-sm leading-6">{maths ? "方程 x² − (k−2)x + (k+1) = 0 有兩個相異實根，求 k 的範圍。" : "光線由水斜向射入空氣時，折射角與入射角的關係是？"}</p>
+        <p className="mt-1 text-sm leading-6">{maths
+          ? rhombus
+            ? "四邊形 CDEF 是菱形，AB = AC，∠BAC = 42°，求 ∠DFE。"
+            : "方程 x² − (k−2)x + (k+1) = 0 有兩個相異實根，求 k 的範圍。"
+          : "光線由水斜向射入空氣時，折射角與入射角的關係是？"}</p>
         <div className="mt-2 flex flex-wrap gap-1">
-          {(eye === "narrow" || eye === "retry" ? choices.filter((item) => item[1] || item[0] !== (maths ? "實數 k" : "入射角")) : choices).map(([label, ok]) => (
+          {(eye === "narrow" || eye === "retry" ? choices.filter((item) => item[1] || item[0] !== choices[choices.length - 1][0]) : choices).map(([label, ok]) => (
             <button
               key={String(label)}
               className="rounded-full bg-white/10 px-3 py-2 text-sm"
@@ -141,12 +152,16 @@ export function SocraticLab() {
                 }
               }}
             >
-              {label}{ok ? " 🔥" : ""}
+              {label}{ok && eye !== "idle" && eye !== "narrow" ? " 🔥" : ""}
             </button>
           ))}
         </div>
         {eye === "hit" ? <p className="mt-2 text-sm text-[#b6f3d2]">🎯 首擊命中 R-審題題眼。保留 80% 權重，已解鎖下一步列式。</p> : null}
-        {eye === "narrow" ? <p className="mt-2 text-sm text-[#ffd58a]">💡 {maths ? "點解「實數 k」唔係決定不等式符號嘅關鍵？再對比剩低兩個字眼。" : "點解「入射角」唔係判斷遠近法線嘅關鍵？先睇光線由水入空氣。"} 命中後權重 65%。</p> : null}
+        {eye === "narrow" ? <p className="mt-2 text-sm text-[#ffd58a]">💡 {maths
+          ? rhombus
+            ? "點解「42°」唔係決定 ∠DFE 的關鍵？先睇菱形對角線平分內角的性質。"
+            : "點解「實數 k」唔係決定不等式符號嘅關鍵？再對比剩低兩個字眼。"
+          : "點解「入射角」唔係判斷遠近法線嘅關鍵？先睇光線由水入空氣。"} 命中後權重 65%。</p> : null}
         {eye === "retry" ? <p className="mt-2 text-sm text-[#b6f3d2]">二次對比命中。權重 65%。</p> : null}
         {eye !== "idle" ? <button className="mt-2 rounded-lg bg-white/10 px-2 py-1 text-[11px]" onClick={() => setEye("idle")}>↺ 重試點題眼</button> : null}
       </section>
@@ -158,7 +173,7 @@ export function SocraticLab() {
           {[0, 5, 10, 15].map((mark) => (
             <button key={mark} className={`rounded-full px-2 py-1 text-[11px] ${second === mark ? "bg-[#e4c07a] text-[#1b1406]" : "bg-white/10"}`} onClick={() => {
               setSecond(mark);
-              if (!maths) return;
+              if (!rhombus) return;
               const shown = mark === 0 ? 0 : mark === 5 ? 7 : mark === 10 ? 8 : 12;
               demo.dispatch({
                 type: "patch",
@@ -180,19 +195,29 @@ export function SocraticLab() {
         <div className="mt-2 grid gap-2 md:grid-cols-2">
           <div className="rounded-xl bg-[#f4efe4] p-2 text-[#21180f]">
             <p className="text-[11px] font-bold">🧠 概念 Why</p>
-            {maths ? (
+            {maths && rhombus ? (
               <>
                 <p className="text-[12px] leading-5">
                   In the figure, <span className="rounded border border-dashed border-[#1f8a4c] px-1">CDEF is a rhombus</span>. If <span className="rounded border border-dashed border-[#2f6fed] px-1">AB = AC</span> and <span className="rounded border border-dashed border-[#d4537e] px-1">∠BAC = 42°</span>, find ∠DFE.
                 </p>
                 <RhombusInk runId={0} pen="both" frame={second >= 15 ? 12 : second >= 10 ? 8 : second >= 5 ? 7 : 0} />
               </>
+            ) : maths ? (
+              <p className="text-[12px] leading-5">
+                x² − (k−2)x + (k+1) = 0 有兩個相異實根 ⇒{" "}
+                <span className="rounded border border-dashed border-[#1f8a4c] px-1">Δ = b² − 4ac &gt; 0</span>，展開時留意{" "}
+                <span className="rounded border border-dashed border-[#2f6fed] px-1">−4(k+1)</span> 的變號。
+              </p>
             ) : <RefractionInk />}
-            {second >= 10 ? <p className="text-[11px]">{maths ? "菱形對角線平分 ∠EFC，所以 ∠DFC = ∠DFE。" : "水比空氣光密。由水入空氣會遠離法線，折射角大於入射角。"}</p> : null}
+            {second >= 10 ? <p className="text-[11px]">{maths
+              ? rhombus
+                ? "菱形對角線平分 ∠EFC，所以 ∠DFC = ∠DFE。"
+                : "「相異實根」是嚴格大於零；寫成 Δ ≥ 0 就失條件 1M。"
+              : "水比空氣光密。由水入空氣會遠離法線，折射角大於入射角。"}</p> : null}
           </div>
           <div className="rounded-xl bg-black/30 p-2">
             <p className="text-[11px] font-bold text-[#e4c07a]">🎯 應試 How · {code}</p>
-            {maths ? (
+            {maths && rhombus ? (
               <div className="mt-1 space-y-1">
                 {JM29_LINES.slice(0, second === 0 ? 0 : second === 5 ? 7 : second === 10 ? 8 : 12).map((line, index) => (
                   <p key={line.expr} className={`text-[12px] leading-5 ${line.expr.includes("34.5") || line.reason === "property of rhombus" ? "underline" : ""}`}>
@@ -209,7 +234,7 @@ export function SocraticLab() {
                 ))}
               </div>
             )}
-            {second >= 15 && maths ? <p className="mt-1 text-[11px] text-[#e4c07a]">對應 e-Book 12/12。CASIO：69 ÷ 2 = 34.5，再寫 °。</p> : null}
+            {second >= 15 && rhombus ? <p className="mt-1 text-[11px] text-[#e4c07a]">對應 e-Book 12/12。CASIO：69 ÷ 2 = 34.5，再寫 °。</p> : null}
           </div>
         </div>
       </section>
@@ -229,20 +254,29 @@ export function SocraticLab() {
             </div>
             {shot !== "none" ? <p className="mt-1 text-[11px]">{shot === "photo" ? "已留本地檔，不強制上傳原圖。" : "跳過上傳，直接對答案。"} 再點圖上的紅色熱區。</p> : null}
             {shot !== "none" && !spot ? (
-              maths
+              maths && rhombus
                 ? <RhombusInk runId={0} pen="both" frame={8} hotspot onHotspot={() => setSpot(true)} />
-                : <RefractionInk hotspot onHotspot={() => setSpot(true)} />
+                : maths
+                  ? <p className="mt-1 text-[11px] text-[#93a4b8]">代數 LQ 沒有作圖題，改做下面的步驟檢查。</p>
+                  : <RefractionInk hotspot onHotspot={() => setSpot(true)} />
             ) : null}
-            {spot ? (
+            {spot || (maths && !rhombus) ? (
               <>
-                <label className="mt-2 block text-[11px]">透明標準圖層 {overlay}%
-                  <input className="mt-1 w-full" type="range" min={0} max={100} value={overlay} onChange={(event) => { const value = Number(event.target.value); setOverlay(value); demo.dispatch({ type: "patch", patch: { overlay: value } }); }} />
-                </label>
-                <div className="relative mt-2 h-24 overflow-hidden rounded-xl bg-[#081018]">
-                  <p className="p-3 text-sm text-[#7d8da1]">{maths ? "學生手繪菱形（底圖）" : "學生手繪光線（底圖）"}</p>
-                  <p className="absolute inset-0 p-3 text-sm font-bold text-[#e24b3c]" style={{ opacity: overlay / 100 }}>{maths ? "標準層：直角符號 + 平分角 34.5°" : "標準層：法線虛線 + 遠離法線箭頭"}</p>
-                </div>
-                {["已標示方向箭頭或直角符號 (1M)", "虛實線及角度比例正確 (1A)"].map((label, index) => (
+                {spot ? (
+                  <>
+                    <label className="mt-2 block text-[11px]">透明標準圖層 {overlay}%
+                      <input className="mt-1 w-full" type="range" min={0} max={100} value={overlay} onChange={(event) => { const value = Number(event.target.value); setOverlay(value); demo.dispatch({ type: "patch", patch: { overlay: value } }); }} />
+                    </label>
+                    <div className="relative mt-2 h-24 overflow-hidden rounded-xl bg-[#081018]">
+                      <p className="p-3 text-sm text-[#7d8da1]">{maths ? "學生手繪菱形（底圖）" : "學生手繪光線（底圖）"}</p>
+                      <p className="absolute inset-0 p-3 text-sm font-bold text-[#e24b3c]" style={{ opacity: overlay / 100 }}>{maths ? "標準層：直角符號 + 平分角 34.5°" : "標準層：法線虛線 + 遠離法線箭頭"}</p>
+                    </div>
+                  </>
+                ) : null}
+                {(maths && !rhombus
+                  ? ["已寫出 Δ > 0 條件 (1M)", "展開 −4(k+1) 沒有變號錯 (1A)"]
+                  : ["已標示方向箭頭或直角符號 (1M)", "虛實線及角度比例正確 (1A)"]
+                ).map((label, index) => (
                   <label key={label} className="mt-1 flex items-center gap-2 text-sm">
                     <input type="checkbox" checked={checks[index]} onChange={() => {
                       const next: [boolean, boolean] = [...checks];
@@ -269,9 +303,21 @@ export function SocraticLab() {
           <div className="mt-2 grid gap-2 md:grid-cols-3">
             {(
               [
-                ["why", "💡 原理消化", maths ? "點解菱形對角線會平分內角？因為四邊相等，對角線平分 ∠EFC，所以 ∠DFC = ∠DFE。" : "點解由水入空氣會遠離法線？水比空氣光密，走向光疏介質。"],
-                ["speed", "⚡ 解難突破", maths ? "MC 可代入 k=0 看判別式符號，先排除再算範圍。" : "先判斷水比空氣光密。若選項寫靠近法線，直接排除。"],
-                ["mark", "🎯 Marking 捉咩字", maths ? "LQ 必寫 property of rhombus，答案 ∠DFE = 34.5°。" : "LQ 必寫「遠離法線，折射角大於入射角」。"],
+                ["why", "💡 原理消化", maths
+                  ? rhombus
+                    ? "點解菱形對角線會平分內角？因為四邊相等，對角線平分 ∠EFC，所以 ∠DFC = ∠DFE。"
+                    : "點解「相異實根」要寫 Δ > 0？兩個不同實根，判別式必須嚴格大於零。"
+                  : "點解由水入空氣會遠離法線？水比空氣光密，走向光疏介質。"],
+                ["speed", "⚡ 解難突破", maths
+                  ? rhombus
+                    ? "先標 ∠DFC = ∠DFE [property of rhombus]，再代 ∠EFC = 69°。"
+                    : "MC 可代入 k=0 看判別式符號，先排除再算範圍。"
+                  : "先判斷水比空氣光密。若選項寫靠近法線，直接排除。"],
+                ["mark", "🎯 Marking 捉咩字", maths
+                  ? rhombus
+                    ? "LQ 必寫 property of rhombus，答案 ∠DFE = 34.5°。"
+                    : "LQ 必寫 Δ > 0 及展開步驟，答案寫範圍不是單一數值。"
+                  : "LQ 必寫「遠離法線，折射角大於入射角」。"],
               ] as const
             ).map(([id, title, body]) => (
               <div key={id} className="rounded-xl bg-black/30 p-2 text-left">

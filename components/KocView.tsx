@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef, type PointerEvent as ReactPointerEvent } from "react";
-import { EBOOK_URL, ebookHits, findSubtopic, FOCUS_RADAR, isEbookPoint, JM29_LINES, lqPaper } from "@/lib/curriculum";
+import { EBOOK_URL, ebookHits, findSubtopic, isEbookPoint, JM29_LINES, lqPaper } from "@/lib/curriculum";
 import { ELEMENTS, HERO, SEATS, TLA, seatProfile } from "@/lib/mock-data";
+import { heroTopicCode, seatFocusScore, seatFocusTopics } from "@/lib/student-profile";
 import { LIGHT_META, lightOf } from "@/lib/mastery";
 import { useDemo } from "@/lib/demo-context";
 import { Card, LightPill, ScoreBar } from "./ui";
@@ -47,18 +48,17 @@ export function KocView() {
       <Card id="seat-anson" kicker="X 軸白話指令" title="紅點只告訴你：先安撫，再拆題">
         <div className="grid grid-cols-4 gap-2 md:grid-cols-5">
           {SEATS.map((seat) => {
-            const score = seat.id === "anson" ? demo.heroScore : seat.mastery;
-            const missed = (seat.id === "anson" && demo.ansonMissed) || (demo.kocAlert && score < 50);
+            const score = seatFocusScore(demo.subject, seat.id, demo.heroScore, demo.examCode);
             const bonus = demo.bonusSeats.includes(seat.id);
             const meta = LIGHT_META[lightOf(score)];
             return (
               <button
                 key={seat.id}
                 onClick={() => demo.dispatch({ type: "focus", id: seat.id })}
-                className={`rounded-xl px-1 py-2 text-center ${missed ? "breathe" : ""}`}
+                className={`rounded-xl px-1 py-2 text-center ${lightOf(score) === "red" ? "breathe" : ""}`}
                 style={{
-                  background: missed ? "#e24b3c" : meta.bg,
-                  color: missed ? "#fff" : meta.fg,
+                  background: meta.bg,
+                  color: meta.fg,
                   boxShadow: demo.focusId === seat.id ? "inset 0 0 0 2px #fff" : undefined,
                 }}
               >
@@ -75,7 +75,9 @@ export function KocView() {
         <Card id="mask" kicker="考後母卷" title="頂部 12% 預警遮罩">
           <div ref={paperRef} className="relative h-64 overflow-hidden rounded-xl bg-[#f4efe4] text-[#21180f]">
             <div className="absolute inset-x-0 top-0 z-10 bg-white/55 backdrop-blur-sm" style={{ height: `${demo.mask}%` }}>
-              <button className="absolute inset-x-0 bottom-0 h-3 cursor-ns-resize bg-[#1d4e89]" onPointerDown={dragMask} />
+              <button aria-label="拖動調整頂部遮罩高度" className="absolute inset-x-0 bottom-0 h-6 cursor-ns-resize touch-none bg-[#1d4e89]/40 pb-1" onPointerDown={dragMask}>
+                <span className="mx-auto mt-2 block h-1 w-16 rounded-full bg-white/80" />
+              </button>
             </div>
             <div className="p-3 text-[12px] leading-5">
               {demo.subject === "Maths" && (demo.kocEbook || demo.ebookOpen || isEbookPoint(demo.examCode)) ? (
@@ -136,7 +138,19 @@ export function KocView() {
         </Card>
       </div>
 
-      <Card id="leader" kicker="三維度造血" title={demo.promoted ? "🌟 已是 KOC Leader" : "🌟 再 1 條錄影即可晉升"}>
+      <Card
+        id="leader"
+        kicker="三維度造血"
+        title={
+          demo.promoted
+            ? "🌟 已是 KOC Leader"
+            : demo.video === "none"
+              ? "🌟 再 1 條錄影即可晉升"
+              : demo.video === "uploaded"
+                ? "🌟 12/12 已送審 · 等 LDC Pass"
+                : "🌟 12/12 已通過 · 已蓋章"
+        }
+      >
         <div className="grid gap-3 md:grid-cols-3">
           <Meter label="教材貢獻" value={78} />
           <Meter label="伴學時數" value={84} />
@@ -155,7 +169,11 @@ export function KocView() {
         <p className="mt-3 text-sm leading-6">
           {demo.promoted
             ? "時薪 +20%。可任常規班 Co-Teaching 副講、主理校本 UT 加操堂，帶教新人 +10 幣。"
-            : "再完成 1 條 Level 2 Topic 教學錄影，並由 LDC Pass，即晉升 KOC Leader。"}
+            : demo.video === "none"
+              ? "再完成 1 條 Level 2 Topic 教學錄影，並由 LDC Pass，即晉升 KOC Leader。"
+              : demo.video === "uploaded"
+                ? "三段 Teach / Learn / Apply 已齊，錄影 12/12 已送到右屏。LDC 用金、木、火 Pass 後即晉升。"
+                : "LDC 已 Pass 並蓋章，重新整理後即顯示 Leader 權益。"}
         </p>
         <div className="mt-3 grid gap-2">
           {TLA.map((item) => (
@@ -181,21 +199,19 @@ function SeatDossier() {
   const demo = useDemo();
   const seat = SEATS.find((item) => item.id === demo.focusId) ?? SEATS[0];
   const profile = seatProfile(seat.id);
-  const score = seat.id === "anson" ? demo.heroScore : seat.mastery;
+  const score = seatFocusScore(demo.subject, seat.id, demo.heroScore, demo.examCode);
   const wrongs = seat.id === "anson" ? demo.ansonWrongs : seat.wrongs;
   const coins = demo.coins[seat.id] ?? 0;
   const tickets = demo.tickets.filter((ticket) => ticket.title.includes(seat.name));
-  const topics = FOCUS_RADAR[demo.subject].map((topic) => ({
-    name: `${topic.code} ${topic.name}`,
-    score: seat.id === "anson" && demo.subject === "Phy" && topic.code === "JPWM07" ? demo.heroScore : topic.score,
-  }));
+  const topics = seatFocusTopics(demo.subject, seat.id, demo.heroScore, demo.examCode);
+  const heroCode = heroTopicCode(demo.subject, demo.examCode);
   const band = wrongs >= 4 ? "錯 ≥4 題" : wrongs >= 2 ? "錯 2–3 題" : "錯 0–1 題";
 
   return (
     <div id="focus-profile" className="mt-3 rounded-xl bg-black/25 p-3">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-[10px] tracking-[0.14em] text-[#e4c07a]">這位同學</p>
+          <p className="text-[10px] tracking-[0.14em] text-[#e4c07a]">這位同學 · 本週課題 {heroCode}</p>
           <p className="text-sm font-bold">{seat.name} {seat.en}</p>
           <p className="text-[11px] text-[#93a4b8]">{HERO.school} · {HERO.form} · {band}</p>
         </div>
@@ -211,9 +227,9 @@ function SeatDossier() {
       <p className="mt-1 text-[12px] text-[#e4c07a]">{demo.subject === "Maths" ? `攻堅支援 [重點] · ${seat.name} · SM02.2 展開變號` : profile.ticket}</p>
       <div className="mt-2 space-y-2">
         {topics.map((topic) => (
-          <div key={topic.name}>
+          <div key={topic.code}>
             <div className="mb-1 flex items-center justify-between text-[12px]">
-              <span>{topic.name}</span>
+              <span>{topic.code} {topic.name}{topic.hero ? " · 本週課題" : ""}</span>
               <LightPill score={topic.score} compact />
             </div>
             <ScoreBar score={topic.score} />

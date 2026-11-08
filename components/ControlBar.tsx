@@ -1,6 +1,6 @@
 "use client";
 
-import { useDemo, type Act, type Phase, type Role } from "@/lib/demo-context";
+import { useDemo, type Act, type Phase, type Role, actScript } from "@/lib/demo-context";
 import { Clapperboard, Gauge, MonitorSmartphone, PanelTop, Timer } from "lucide-react";
 
 const ACTS: { id: Act; label: string }[] = [
@@ -60,7 +60,8 @@ export function ControlBar() {
             <span className="text-xs">五幕劇本</span>
           </div>
           <button
-            className="rounded-full bg-white/10 px-3 py-1 text-xs"
+            type="button"
+            className={`rounded-full px-3 py-1 text-xs font-bold ${demo.autoTour ? "bg-[#e4c07a] text-[#1b1406]" : "bg-white/10"}`}
             onClick={() => demo.dispatch({ type: demo.autoTour ? "tour-stop" : "tour-start" })}
           >
             {demo.autoTour ? `停止巡遊 ${demo.tourLeft}s` : "自動巡遊"}
@@ -87,6 +88,21 @@ export function ControlBar() {
             </button>
           ))}
         </div>
+        {demo.autoTour ? (
+          <p className="rounded-xl border border-[#e4c07a]/40 bg-[#241c10] px-3 py-2 text-[12px] leading-5 text-[#f3e6c8]">
+            <b className="text-[#e4c07a]">正在巡遊 · {actScript(demo.act)?.title ?? "五幕劇本"}</b>
+            {" · "}本幕剩餘 {demo.tourLeft} 秒。{actScript(demo.act)?.body}
+          </p>
+        ) : demo.tourNotice ? (
+          <div className="flex items-start justify-between gap-3 rounded-xl border border-[#e4c07a]/50 bg-[#241c10] px-3 py-2 text-[12px] leading-5 text-[#f3e6c8]">
+            <p>
+              <b className="text-[#e4c07a]">巡遊已停止。</b> {demo.tourNotice}
+            </p>
+            <button className="shrink-0 text-[11px] text-[#e4c07a]" onClick={() => demo.dispatch({ type: "patch", patch: { tourNotice: null } })}>
+              關閉
+            </button>
+          </div>
+        ) : null}
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1 text-[#93a4b8]">
             <MonitorSmartphone size={14} />

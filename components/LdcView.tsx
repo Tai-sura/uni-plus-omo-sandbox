@@ -2,7 +2,8 @@
 
 import { useEffect } from "react";
 import { HERO, SEATS } from "@/lib/mock-data";
-import { ebookHits, ebookRescueCard, findSubtopic, isEbookPoint, lqPaper, lqStepsCard, lqTwinCard, packOf, teleScript } from "@/lib/curriculum";
+import { ebookHits, ebookRescueCard, findSubtopic, isEbookPoint, lqPaper, lqStepsCard, lqTwinCard, packOf, teleScript, type SubjectKey } from "@/lib/curriculum";
+import { seatFocusScore } from "@/lib/student-profile";
 import { useDemo } from "@/lib/demo-context";
 import { lightOf } from "@/lib/mastery";
 import { EbookConsole, EbookRevealer } from "./EbookKit";
@@ -114,7 +115,7 @@ export function LdcView() {
           </button>
         </div>
         <div className="mt-3 grid gap-2 md:grid-cols-3">
-          {bands(demo.classMode, seats, demo.heroScore, demo.ansonWrongs, ebook).map((band) => (
+          {bands(demo.classMode, seats, demo.heroScore, demo.ansonWrongs, demo.subject, demo.examCode, ebook).map((band) => (
             <div key={band.title} className="rounded-xl bg-black/25 p-2">
               <p className="text-xs font-bold" style={{ color: band.color }}>{band.title}</p>
               <div className="mt-1 flex flex-wrap gap-1">
@@ -240,7 +241,7 @@ export function LdcView() {
           <Audit label="🔥 火 · 鏡頭張力" value={demo.audit.fire} onChange={(value) => demo.dispatch({ type: "audit", key: "fire", value })} />
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-3">
-          <button className="rounded-xl bg-[#e4c07a] px-4 py-2 text-sm font-bold text-[#1b1406]" onClick={() => demo.dispatch({ type: "brain-pass" })}>
+          <button className="rounded-xl bg-[#e4c07a] px-4 py-2 text-sm font-bold text-[#1b1406]" onClick={() => demo.dispatch({ type: "pass" })}>
             ✅ Pass / 核准發放版稅
           </button>
           <button className="rounded-xl bg-[#e24b3c] px-4 py-2 text-sm" onClick={() => demo.dispatch({ type: "csm-handoff" })}>
@@ -261,10 +262,10 @@ function Audit({ label, value, onChange }: { label: string; value: number; onCha
   );
 }
 
-function bands(mode: "large" | "small", seats: typeof SEATS, hero: number, wrongs: number, ebook = false) {
+function bands(mode: "large" | "small", seats: typeof SEATS, hero: number, wrongs: number, subject: SubjectKey, examCode: string | null, ebook = false) {
   const rows = seats.map((seat) => ({
     ...seat,
-    mastery: seat.id === "anson" ? hero : seat.mastery,
+    mastery: seatFocusScore(subject, seat.id, hero, examCode),
     wrongs: seat.id === "anson" ? wrongs : seat.wrongs,
   }));
   if (mode === "large") {
