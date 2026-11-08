@@ -4,8 +4,8 @@ import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, ResponsiveContainer } from "recharts";
 import { useDemo } from "@/lib/demo-context";
-import { CAPSULES, LQ_STEPS, MA_MAP, QUESTIONS, SEATS, seatProfile } from "@/lib/mock-data";
-import { FOCUS_RADAR, packOf } from "@/lib/curriculum";
+import { CAPSULES, MA_MAP, QUESTIONS, SEATS, seatProfile } from "@/lib/mock-data";
+import { FOCUS_RADAR, findSubtopic, lqPaper, packOf } from "@/lib/curriculum";
 import { calcMastery, LIGHT_META, type HintLevel } from "@/lib/mastery";
 import { StudentEbookCard, StudentEbookMirror } from "./EbookKit";
 import { Card, LightPill, ScoreBar } from "./ui";
@@ -45,6 +45,7 @@ export function StudentView() {
       </header>
 
       <StudentEbookMirror />
+      <StudentLqBoard />
 
       <div id="hero-score" className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0e2433] p-3">
         <Burst token={demo.burst} />
@@ -58,7 +59,7 @@ export function StudentView() {
         <div className="mt-2">
           <ScoreBar score={personal} />
         </div>
-        <p className="mt-2 text-[11px] text-[#e4c07a]">本題計分權重 {demo.eyeWeight}% · 已寫入 Hint h{demo.hint}</p>
+        <p className="mt-2 text-[11px] text-[#e4c07a]">長題目步驟分佔校內卷 70% · MC 概念快測 30%</p>
         <p className="mt-2 text-[11px] leading-5 text-[#c5d0de]">
           {demo.phase === "day1" && "Day 1 初練已封頂 84% 淺綠。原始分先不寫進深綠，等 48 小時雙胞胎。"}
           {demo.phase === "h48" && !demo.twinCorrect && `雙胞胎題已送到同一 Level 3：${lead.subtopics[1]?.code ?? lead.subtopics[0].code}。答對才可衝破 85%。`}
@@ -221,7 +222,7 @@ export function StudentView() {
         <SprintBoard />
       </Card>
 
-      <Card id="socratic" kicker="受約束蘇格拉底 · 📝 LQ 長題目步驟拆解 (1M/1A)" title={`${lead.name_zh} · 先題眼，再 15 秒分步卡`}>
+      <Card id="socratic" kicker="受約束蘇格拉底 · 概念快測" title={`${lead.name_zh} · 先題眼，再 15 秒分步卡`}>
         <p className="text-sm leading-6">{demo.emi ? topicByTop(demo.top2[0]).stemEn : topicByTop(demo.top2[0]).stem}</p>
         {demo.qStage !== "ask" ? <p className="mt-1 text-[11px] text-[#e4c07a]">題眼：{topicByTop(demo.top2[0]).eye}</p> : null}
         {demo.qStage === "ask" ? (
@@ -238,9 +239,14 @@ export function StudentView() {
             {demo.ansonMissed ? <p className="text-[11px] text-[#ffb4ac]">已選 A。右屏座位應該正在閃紅。</p> : <p className="text-[11px] text-[#b6f3d2]">已答對，紅點熄滅。</p>}
             <p className="text-[11px] text-[#93a4b8]">點中真正決定方向的題眼。</p>
             <div className="grid grid-cols-3 gap-1">
-              <button className="rounded-lg bg-[#143524] px-1 py-2 text-[11px]" onClick={() => demo.dispatch({ type: "eye", kind: "hit" })}>水</button>
-              <button className="rounded-lg bg-white/10 px-1 py-2 text-[11px]" onClick={() => demo.dispatch({ type: "eye", kind: "miss" })}>空氣</button>
-              <button className="rounded-lg bg-white/10 px-1 py-2 text-[11px]" onClick={() => demo.dispatch({ type: "eye", kind: "miss" })}>折射角</button>
+              {(demo.subject === "Maths"
+                ? [["判別式", "hit"], ["實根", "miss"], ["開口", "miss"]]
+                : [["水", "hit"], ["空氣", "miss"], ["折射角", "miss"]]
+              ).map(([label, kind]) => (
+                <button key={label} className={`rounded-lg px-1 py-2 text-[11px] ${kind === "hit" ? "bg-[#143524]" : "bg-white/10"}`} onClick={() => demo.dispatch({ type: "eye", kind: kind as "hit" | "miss" })}>
+                  {label}
+                </button>
+              ))}
             </div>
             {demo.eye !== "none" ? (
               <div className="rounded-xl bg-black/25 p-2">
@@ -256,8 +262,20 @@ export function StudentView() {
                     </button>
                   ))}
                 </div>
-                {demo.stepPage === 0 ? <p className="text-sm leading-6">水比空氣光密。走向光疏介質時，光線遠離法線。</p> : null}
-                {demo.stepPage === 1 ? <p className="text-sm leading-6">給分點：寫出「離法線」及「折射角大於入射角」。漏寫斜向，扣步驟分。</p> : null}
+                {demo.stepPage === 0 ? (
+                  <p className="text-sm leading-6">
+                    {demo.subject === "Maths"
+                      ? "相異實根要寫 Δ > 0。先圈出題目的條件，再列判別式，這步是第一個 1M。"
+                      : "水比空氣光密。走向光疏介質時，光線遠離法線。"}
+                  </p>
+                ) : null}
+                {demo.stepPage === 1 ? (
+                  <p className="text-sm leading-6">
+                    {demo.subject === "Maths"
+                      ? "給分點：展開 −4(k+1) 時負正得負。漏變號就停在第二個 1M，拿不到最後 1A。"
+                      : "給分點：寫出「離法線」及「折射角大於入射角」。漏寫斜向，扣步驟分。"}
+                  </p>
+                ) : null}
                 {demo.stepPage === 2 ? (
                   <div>
                     <div className="relative h-28 overflow-hidden rounded-lg bg-[#081018]">
@@ -351,21 +369,8 @@ export function StudentView() {
         {demo.flash === "locked" ? <p className="mt-1 text-[11px] text-[#ffb4ac]">鎖定 {demo.flashLeft} 秒</p> : null}
       </Card>
 
-      <Card id="lq" kicker="LQ 誠信自評" title="未滿 50% 步驟分，不能領幣">
-        <p className="text-[11px] text-[#93a4b8]">
-          {demo.subject === "Maths" ? "SM02.2 判別式與根的性質 · 滿分 10 · 門檻 5" : "JPWM07.2 視深與實深計算 · 滿分 10 · 門檻 5"}
-        </p>
-        <div className="mt-2 space-y-1">
-          {LQ_STEPS.map((step, index) => (
-            <label key={step.label} className="flex items-center justify-between gap-2 rounded-lg bg-black/20 px-2 py-1.5 text-sm">
-              <span>
-                <input className="mr-2" type="checkbox" checked={demo.lqSteps[index]} onChange={() => demo.dispatch({ type: "lq", index })} />
-                {demo.subject === "Maths" ? step.label : step.label.replace(/（MA\d）/g, "")}
-              </span>
-              <span className="num text-[#e4c07a]">{step.marks}</span>
-            </label>
-          ))}
-        </div>
+      <Card id="lq" kicker="LQ 誠信自評" title="未過一半步驟分，不能領幣">
+        <LqSelfCheck />
         <div className="mt-2 grid grid-cols-2 gap-2">
           <button className="rounded-xl bg-white/10 py-2 text-xs" onClick={() => demo.dispatch({ type: "claim", mode: "blank" })}>
             交白卷勾全錯
@@ -440,7 +445,60 @@ export function StudentView() {
 }
 
 function topicByTop(id: string | undefined) {
-  return QUESTIONS[id ?? "phy-refr"] ?? QUESTIONS["phy-refr"];
+  if (id && QUESTIONS[id]) return QUESTIONS[id];
+  if (id?.startsWith("SM") || id?.startsWith("JM")) return QUESTIONS["math-quad"];
+  return QUESTIONS["phy-refr"];
+}
+
+function StudentLqBoard() {
+  const demo = useDemo();
+  const ebookLive = demo.subject === "Maths" && (demo.ebookOpen || demo.smokeCode === "JM29" || Boolean(demo.examCode?.startsWith("JM29")));
+  if (ebookLive) return null;
+  const point = findSubtopic(demo.subject, demo.examCode);
+  const paper = lqPaper(demo.subject, demo.examCode);
+  return (
+    <div id="student-lq" className="rounded-2xl border border-[#e4c07a]/50 bg-[#1a1408] p-3">
+      <p className="text-[10px] font-bold text-[#e4c07a]">📝 LQ 長題目 · 佔校內卷 70% · 1M / 1M / 1A</p>
+      <p className="mt-1 text-sm font-bold">{point.code} {point.name} · {point.score}%</p>
+      <p className="mt-1 text-[12px] leading-5">{paper.stem}</p>
+      <div className="mt-2 space-y-1">
+        {paper.steps.map((step) => (
+          <div
+            key={step.title}
+            className={`rounded-lg px-2 py-1.5 text-[12px] leading-5 ${
+              step.status === "got" ? "bg-[#143524]" : step.status === "break" ? "bg-[#3a3014]" : "bg-[#3a1c22]"
+            }`}
+          >
+            <p>
+              <b className="text-[#e4c07a]">{step.mark}</b> {step.title}
+            </p>
+            <p className="text-[11px] text-[#c5d0de]">{step.self}</p>
+          </div>
+        ))}
+      </div>
+      <p className="mt-2 text-[10px] leading-4 text-[#93a4b8]">MC 概念快測佔其餘 30%。這張卡就是右屏正在批改的同一條長題目。</p>
+    </div>
+  );
+}
+
+function LqSelfCheck() {
+  const demo = useDemo();
+  const paper = lqPaper(demo.subject, demo.examCode);
+  return (
+    <>
+      <p className="text-[11px] text-[#93a4b8]">{paper.code} · 滿分 {paper.total} 分 · 勾到至少 2 步才可領幣</p>
+      <div className="mt-2 space-y-1">
+        {paper.steps.map((step, index) => (
+          <label key={step.title} className="flex items-center justify-between gap-2 rounded-lg bg-black/20 px-2 py-1.5 text-sm">
+            <span>
+              <input className="mr-2" type="checkbox" checked={demo.lqSteps[index]} onChange={() => demo.dispatch({ type: "lq", index })} />
+              {step.mark} {step.title}
+            </span>
+          </label>
+        ))}
+      </div>
+    </>
+  );
 }
 
 function FocusCard() {

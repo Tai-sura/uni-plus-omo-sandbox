@@ -170,7 +170,7 @@ const initial: State = {
   toast: null,
   includeUntested: false,
   showHiddenAxes: false,
-  cart: packOf("Phy").topics.map((topic) => topic.code),
+  cart: [...packOf("Maths").topics].sort((a, b) => Number(b.hot) - Number(a.hot)).slice(0, 5).map((topic) => topic.code),
   ansonMissed: false,
   ansonWrongs: 2,
   instructionOpen: false,
@@ -260,10 +260,10 @@ const initial: State = {
   eyeWeight: 100,
   regrouped: false,
   isOpen: null,
-  subject: "Phy",
+  subject: "Maths",
   levelView: "topic",
-  smokeCode: "SPEM01",
-  examCode: "SPEM01.1",
+  smokeCode: "SM02",
+  examCode: "SM02.2",
   studentCard: null,
   kocAlert: false,
   parentBrief: null,
@@ -534,9 +534,8 @@ function reducer(state: State, action: Action): State {
       if (action.mode === "blank") {
         return { ...state, toast: "交白卷不能勾「全錯」領幣。須先達到 50% 步驟分。" };
       }
-      const marks = [2, 3, 3, 2];
-      const got = state.lqSteps.reduce((sum, on, i) => sum + (on ? marks[i] : 0), 0);
-      if (got < 5) return { ...state, toast: `目前只自評 ${got}/10，未過 50% 門檻，不能領取 +2 StarCoins。` };
+      const got = state.lqSteps.slice(0, 3).filter(Boolean).length;
+      if (got < 2) return { ...state, toast: `目前只自評 ${got}/3 步，未過一半步驟分，不能領取 +2 StarCoins。` };
       return {
         ...state,
         lqClaimed: true,
