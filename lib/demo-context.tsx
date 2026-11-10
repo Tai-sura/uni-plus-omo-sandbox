@@ -13,6 +13,7 @@ import { activeTopics, isEbookPoint, JM29_LINES, lqTwinCard, packOf, teleScript,
 import { HERO, PAYOUT_OK, SEATS, TOPICS } from "./mock-data";
 import { approveKocPass } from "./koc-pass";
 import { freshCarts, makeNote, reviewCopy, sameNote, swapStudentDraft, switchSubject, type AttemptDraft, type DrawReview, type NoteCard } from "./learning-context";
+import { freshDesk, saveLesson, type LessonDesk, type LessonGroup, type LessonKind } from "./lesson-desk";
 import { lightOf, type HintLevel, type Light } from "./mastery";
 
 export type Role = "student" | "parent" | "ldc" | "koc" | "csm";
@@ -170,6 +171,7 @@ interface State {
   commute: boolean;
   studentTab: "radar" | "quest" | "cart" | "notes";
   phonePulse: number;
+  lessonDesk: LessonDesk;
 }
 
 const initial: State = {
@@ -296,6 +298,7 @@ const initial: State = {
   commute: false,
   studentTab: "radar",
   phonePulse: 0,
+  lessonDesk: freshDesk(),
 };
 
 type Action =
@@ -310,6 +313,7 @@ type Action =
   | { type: "submit-steps" }
   | { type: "note"; text?: string }
   | { type: "draw-review"; status: "pending" | "done" }
+  | { type: "lesson-save"; kind: LessonKind; groups: LessonGroup[] }
   | { type: "twin"; ok: boolean }
   | { type: "flash"; ok: boolean }
   | { type: "flash-unlock" }
@@ -520,6 +524,7 @@ function reducer(state: State, action: Action): State {
         cartSource: "tour" as const,
         notes: state.notes,
         starCoins: state.starCoins,
+        lessonDesk: state.lessonDesk,
         studentTab,
         phonePulse: state.phonePulse + 1,
         act: action.act,
@@ -933,6 +938,16 @@ function reducer(state: State, action: Action): State {
         return { ...switched, parentBrief: parentBriefFor(switched.subject, switched.examCode, switched.hotkeys, switched.focusId) };
       }
       return switched;
+    }
+    case "lesson-save": {
+      const saved = saveLesson(state.lessonDesk, { subject: state.subject, kind: action.kind, groups: action.groups });
+      if (saved.error) return { ...state, toast: saved.error };
+      const suggestion = state.lessonDesk.suggestion[state.subject];
+      return {
+        ...state,
+        lessonDesk: saved.desk,
+        toast: `${saved.lines.join(" / ")}。學期建議仍是 ${suggestion}，沒有被本堂覆蓋。`,
+      };
     }
     case "draw-review": {
       if (action.status === "done" && state.drawReview !== "pending") return state;

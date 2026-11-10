@@ -7,6 +7,7 @@ import { lightOf } from "../lib/mastery.ts";
 import { approveKocPass } from "../lib/koc-pass.ts";
 import { contextIssues, freshCarts, makeNote, reviewCopy, sprintTopics, switchSubject, topicNames, visibleNotes, type LearningSlice } from "../lib/learning-context.ts";
 import { seatFocusTopics } from "../lib/student-profile.ts";
+import { freshDesk, offListTaught, onSchoolList, saveLesson } from "../lib/lesson-desk.ts";
 
 assert.equal(lightOf(84), "light");
 assert.equal(lightOf(85), "deep");
@@ -89,4 +90,43 @@ assert.equal(reviewCopy("pending").includes("KOC 已覆核"), false);
 assert.match(reviewCopy("done"), /KOC 已覆核/);
 assert.notEqual(reviewCopy("pending"), reviewCopy("done"));
 
-console.log("check-rules: lightOf, pass idempotency, subject switch, carts, notes, sprint scores, review states ok");
+const desk = freshDesk();
+assert.equal(desk.suggestion.Maths, "SM02.2");
+assert.equal(desk.suggestion.Phy, "JPWM07.2");
+assert.equal(onSchoolList("Phy", "JPWM07.2"), true);
+assert.equal(onSchoolList("Phy", "SPEM01.1"), false);
+const taught = saveLesson(desk, {
+  subject: "Phy",
+  kind: "class",
+  groups: [{ tutor: "Oscar 黃朗", topicCode: "JPWM07.2", mode: "concept", students: ["anson"] }],
+});
+assert.equal(taught.desk.suggestion.Phy, "JPWM07.2");
+assert.equal(taught.desk.cells["Phy|anson|JPWM07.2"].concept, true);
+assert.equal(taught.desk.cells["Phy|anson|JPWM07.2"].exercise, false);
+assert.match(taught.lines[0], /模擬，尚未送出公司表/);
+assert.equal(taught.lines[0].includes("已送出"), false);
+const extra = saveLesson(taught.desk, {
+  subject: "Phy",
+  kind: "extra",
+  groups: [{ tutor: "Oscar 黃朗", topicCode: "JPWM07.2", mode: "exercise", students: ["anson"] }],
+});
+assert.equal(extra.desk.suggestion.Phy, desk.suggestion.Phy);
+assert.equal(extra.desk.cells["Phy|anson|JPWM07.2"].concept, true);
+assert.equal(extra.desk.cells["Phy|anson|JPWM07.2"].exercise, true);
+assert.match(extra.lines[0], /^\[Oscar 黃朗\] 補課：/);
+const split = saveLesson(extra.desk, {
+  subject: "Phy",
+  kind: "class",
+  groups: [
+    { tutor: "Oscar 黃朗", topicCode: "JPWM07.2", mode: "both", students: ["anson"] },
+    { tutor: "Chloe 李晴", topicCode: "SPEM01.1", mode: "both", students: ["s4"] },
+  ],
+});
+assert.equal(split.lines.length, 2);
+assert.match(split.lines[1], /Chloe 李晴/);
+assert.equal(split.desk.suggestion.Phy, "JPWM07.2");
+assert.equal(offListTaught(split.desk, "Phy", "s4", "SPEM01.1"), true);
+assert.equal(offListTaught(split.desk, "Phy", "anson", "JPWM07.2"), false);
+assert.equal(saveLesson(desk, { subject: "Maths", kind: "class", groups: [] }).error?.includes("請先選課題"), true);
+
+console.log("check-rules: lightOf, pass idempotency, subject switch, carts, notes, sprint scores, review states, lesson desk ok");

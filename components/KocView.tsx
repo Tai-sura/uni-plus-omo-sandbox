@@ -6,6 +6,7 @@ import { ELEMENTS, HERO, SEATS, TLA, seatProfile } from "@/lib/mock-data";
 import { heroTopicCode, seatFocusScore, seatFocusTopics } from "@/lib/student-profile";
 import { LIGHT_META, lightOf } from "@/lib/mastery";
 import { useDemo } from "@/lib/demo-context";
+import { LessonDeskCard } from "./LessonDesk";
 import { Card, LightPill, ScoreBar } from "./ui";
 
 export function KocView() {
@@ -50,6 +51,8 @@ export function KocView() {
       ) : demo.drawReview === "done" ? (
         <p className="rounded-xl bg-[#143524] px-3 py-2 text-sm">這次作圖自檢已標為已覆核（模擬）。</p>
       ) : null}
+
+      <LessonDeskCard />
 
       {demo.subject === "Maths" ? <StudentPageOnDesk seatName={(SEATS.find((seat) => seat.id === demo.focusId) ?? SEATS[0]).name} /> : null}
 
